@@ -25,8 +25,7 @@ try:
 except ImportError:
     raise Exception("z3 module is needed to use this pattern matcher")
 
-from tools import asttools, unparse
-from graphs import leveling
+from tools import asttools, unparse, leveling
 import pre_processing
 
 

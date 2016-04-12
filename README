@@ -1,9 +1,0 @@
-This is sspam: Symbolic Simplification with PAttern Matching.
-
-
-Requirements:
--------------
-
-To use sspam, you need:
-- z3
-- sympy
