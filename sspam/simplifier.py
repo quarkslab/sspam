@@ -11,7 +11,7 @@ import sys
 import StringIO
 import os.path
 
-from tools import asttools, unparse, leveling
+from sspam.tools import asttools, unparse, leveling
 import pattern_matcher
 import pre_processing
 import arithm_simpl

@@ -14,8 +14,7 @@ import os
 import unittest
 
 from sspam import *
-from tools import asttools
-from graphs import leveling
+from sspam.tools import asttools, leveling
 import templates
 
 
@@ -405,7 +404,7 @@ c = (2 * x)""")]
     def test_samples(self):
         'Tests on real samples'
         samples_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "simpl_samples")
+                                   "samples")
         for samplefilename in os.listdir(samples_dir):
             fname = os.path.join(samples_dir, samplefilename)
             samplefile = open(fname, 'r')

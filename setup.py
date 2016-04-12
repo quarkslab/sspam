@@ -1,12 +1,10 @@
-from setuptools import setup
+#!/usr/bin/python
 
-
-with open('README.rst') as f:
-    readme = f.read()
+from distutils.core import setup
 
 setup(
     name='sspam',
     description='Symbolic Simplification with PAttern Matching',
-    long_description=readme,
-    packages=["sspam"]
+    packages=["sspam"],
+    py_modules=["sspam.tools"]
 )
