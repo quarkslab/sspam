@@ -1,0 +1,3 @@
+build/*
+sspam.egg-info/*
+dist/*
