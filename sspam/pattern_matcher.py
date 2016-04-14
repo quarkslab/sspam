@@ -429,13 +429,28 @@ class PatternReplacement(ast.NodeTransformer):
         'Check if BoolOp is exaclty matching or contain pattern'
 
         if isinstance(self.patt_ast, ast.BoolOp):
-            pat = PatternMatcher(node, self.patt_ast, self.nbits)
-            matched = pat.visit(node, self.patt_ast)
-            if matched:
-                new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
-                return new_node
-            else:
-                return self.generic_visit(node)
+            if len(node.values) == len(self.patt_ast.values):
+                pat = PatternMatcher(node, self.patt_ast, self.nbits)
+                matched = pat.visit(node, self.patt_ast)
+                if matched:
+                    new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
+                    return new_node
+                else:
+                    return self.generic_visit(node)
+            elif len(node.values) > len(self.patt_ast.values):
+                # associativity n to m
+                for combi in itertools.combinations(node.values,
+                                                    len(self.patt_ast.values)):
+                    rest = [elem for elem in node.values if not elem in combi]
+                    testnode = ast.BoolOp(node.op, list(combi))
+                    pat = PatternMatcher(testnode, self.patt_ast, self.nbits)
+                    matched = pat.visit(testnode, self.patt_ast)
+                    if matched:
+                        new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
+                        new_node = ast.BoolOp(node.op, [new_node] + rest)
+                        new_node = leveling.Unleveling().visit(new_node)
+                        return new_node
+            return self.generic_visit(node)
 
         if isinstance(self.patt_ast, ast.BinOp):
             if type(node.op) != type(self.patt_ast.op):
@@ -451,7 +466,7 @@ class PatternReplacement(ast.NodeTransformer):
                     new_node = ast.BoolOp(op, [new_node] + rest)
                     new_node = leveling.Unleveling().visit(new_node)
                     return new_node
-            return self.generic_visit(node)
+        return self.generic_visit(node)
 
 
 def replace(target_str, pattern_str, replacement_str):
@@ -470,11 +485,13 @@ def replace(target_str, pattern_str, replacement_str):
 
 
 if __name__ == '__main__':
-    patt_string =  "- A - B + 2*(A | B)"
-    test = "((4*((x ^ 38) & 148) - 2*(x ^ 38) + 214) | 34) - (x ^ 77) + 239"
-    rep = "(A ^ B)"
+    patt_string =  "A + B + (~A & ~B)"
+    test = "(((x + y) + (((4294967295 * x) + 4294967295) & ((4294967295 * y) + 4294967295)))) + 1"
+    rep = "(A & B) - 1"
 
     # print match(test, patt_string)
     # print "-"*80
-    unparse.Unparser(replace(test, patt_string, rep))
+    res = replace(test, patt_string, rep)
+    print ast.dump(res)
+    unparse.Unparser(res)
     print ""

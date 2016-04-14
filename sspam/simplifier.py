@@ -19,28 +19,29 @@ import arithm_simpl
 
 # list of known patterns and their replacements
 default_rules = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
-                   ("(A | B) - (A & ~B)", "B"),
-                   ("- (A ^ ~B) - 2*(A | B)", "-A - B + 1"),
-                   ("A + B + 1 + (~A | ~B)", "(A | B)"),
-                   ("A - B + (~(2*A) & 2*B)", "A ^ B"),
-                   ("- A -(~(2*A) & 2*B)", "- (A ^ B) - B"),
-                   # ("A + (~(2*A) & 2*B)", "(A ^ B) + B"),
-                   ("-B + (~(2*A) & 2*B)", "(A ^ B) - A"),
-                   ("-B + 2*(~A & B)", "(A ^ B) - A"),
-                   ("A - B + 2*(~A & B)", "(A ^ B)"),
-                   ("(A & B) + (A | B)", "A + B"),
-                   ("(A ^ B) + 2*(A & B)", "A + B"),
-                   ("A + B - 2*(A & B)", "(A ^ B)"),
-                   ("- A - B + 2*(A | B)", "(A ^ B)"),
-                   ("A + B - (A | B)", "A & B"),
-                   ("(A & B) - (~A | B)", "A + 1"),
-                   ("(A | B) - (A & B)", "A ^ B"),
-                   ("-B + (2*(~A) & 2*B)", "(A ^ B) - A"),
-                   ("-2*(~A & B) + B", "- (A ^ B) + A"),
-                   # makes test_my_mba.py fail if higher in the list
-                   ("((2*A + 1) & 2*B)", "(2*A & 2*B)"),
-                   ("2*(A ^ 127)", "2*(~A)")
-                   ]
+                 ("(A | B) - (A & ~B)", "B"),
+                 ("- (A ^ ~B) - 2*(A | B)", "-A - B + 1"),
+                 ("A + B + 1 + (~A | ~B)", "(A | B)"),
+                 ("A - B + (~(2*A) & 2*B)", "A ^ B"),
+                 ("- A -(~(2*A) & 2*B)", "- (A ^ B) - B"),
+                 # ("A + (~(2*A) & 2*B)", "(A ^ B) + B"),
+                 ("-B + (~(2*A) & 2*B)", "(A ^ B) - A"),
+                 ("-B + 2*(~A & B)", "(A ^ B) - A"),
+                 ("A - B + 2*(~A & B)", "(A ^ B)"),
+                 ("(A & B) + (A | B)", "A + B"),
+                 ("(A ^ B) + 2*(A & B)", "A + B"),
+                 ("A + B - 2*(A & B)", "(A ^ B)"),
+                 ("- A - B + 2*(A | B)", "(A ^ B)"),
+                 ("A + B - (A | B)", "A & B"),
+                 ("(A & B) - (~A | B)", "A + 1"),
+                 ("(A | B) - (A & B)", "A ^ B"),
+                 ("-B + (2*(~A) & 2*B)", "(A ^ B) - A"),
+                 ("-2*(~A & B) + B", "- (A ^ B) + A"),
+                 ("A + B + (~A & ~B)", "(A & B) - 1"),
+                 # makes test_my_mba.py fail if higher in the list
+                 ("((2*A + 1) & 2*B)", "(2*A & 2*B)"),
+                 ("2*(A ^ 127)", "2*(~A)")
+]
 
 
 debug = False
@@ -144,9 +145,12 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
     """
     Take an expression and an optionnal number of bits as input.
 
-    Expression can be given on command line or as a file.
+    Expression can be given on command line or as a file, and should
+    be in cse form (you can use cse script from sspam.tools)
+
     If not precised, number of bits will be deduced from the highest
     constant of the expression if possible, else it will be 8.
+
     """
 
     if os.path.isfile(expr):
