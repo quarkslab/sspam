@@ -38,6 +38,7 @@ default_rules = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
                  ("-B + (2*(~A) & 2*B)", "(A ^ B) - A"),
                  ("-2*(~A & B) + B", "- (A ^ B) + A"),
                  ("A + B + (~A & ~B)", "(A & B) - 1"),
+                 ("A + B + 2*(~A | ~B)", "(A ^ B) - 2"),
                  # makes test_my_mba.py fail if higher in the list
                  ("((2*A + 1) & 2*B)", "(2*A & 2*B)"),
                  ("2*(A ^ 127)", "2*(~A)")
@@ -87,8 +88,8 @@ class Simplifier(ast.NodeTransformer):
                 if not asttools.Comparator().visit(new_ast, expr_ast):
                     print "replaced! "
 
-                    print unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(expr_ast)))
-                    print unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(new_ast)))
+                    unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(expr_ast)))
+                    unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(new_ast)))
                     print "before:   ", ast.dump(expr_ast)
                     print "pattern:  ", ast.dump(pattern)
                     unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(pattern)))
