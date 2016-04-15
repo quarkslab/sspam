@@ -4,7 +4,6 @@ import operator
 
 import leveling
 
-import inspect
 
 def flatten(l):
     'Flatten a list'
@@ -43,35 +42,6 @@ def restore_hooks(hooks):
     ast.operator.__hash__ = hooks[3]
 
 
-class AstSet(set):
-    """
-    Custom set to support comarison between set of ast.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(AstSet, self).__init__(*args, **kwargs)
-
-    def __eq__(self, other):
-        return (len(self) == len(other) and
-                all(Comparator().visit(x, y)
-                    for x, y in zip(self, other)))
-
-
-class IsThereBoolOp(ast.NodeVisitor):
-    """
-    Check if there are BoolOp nodes in the ast.
-    """
-
-    def __init__(self):
-        self.result = False
-
-    def reset(self):
-        self.result = False
-
-    def visit_BoolOp(self, node):
-        self.result = True
-
-
 class GetVariables(ast.NodeVisitor):
     """
     Get all identifiers (instances of ast.Name) of an ast.
@@ -89,20 +59,6 @@ class GetVariables(ast.NodeVisitor):
         self.result.add(node.id)
 
 
-class GetNums(ast.NodeVisitor):
-    """
-    Get all numeric values (instances of ast.Num) of an ast.
-    """
-
-    def __init__(self):
-        'Result contains numeric values of ast.Num nodes'
-        self.result = set()
-
-    def visit_Num(self, node):
-        'Add node value to result'
-        self.result.add(node.n)
-
-
 class GetSize(ast.NodeVisitor):
     """
     Get bitsize of ast: approximate with 2**8, 2**16...
@@ -117,7 +73,6 @@ class GetSize(ast.NodeVisitor):
 
     def visit_Num(self, node):
         'Approximate nbits with n power of two'
-
         bitlen = (abs(node.n)).bit_length()
         if bitlen > self.result:
             # didn't find a way to do this cleanly...
@@ -135,26 +90,6 @@ class GetSize(ast.NodeVisitor):
                 self.result = 64
             else:
                 raise Exception("Nbits not supported")
-
-
-class UpdateMutableList(ast.NodeVisitor):
-    """
-    Gather all node marked as "to_obfuscate" that are not already in
-    targets.
-    """
-
-    def __init__(self, targets):
-        'Init targets and remove nodes that are no longer mutable'
-        self.targets = targets
-        for node in self.targets:
-            if not hasattr(node, 'to_obfuscate'):
-                self.targets.remove(node)
-
-    def visit(self, node):
-        'Add node to targets if node has to_obfuscate attribute'
-        if hasattr(node, 'to_obfuscate') and not (node in self.targets):
-            self.targets.append(node)
-        self.generic_visit(node)
 
 
 class GetConstExpr(ast.NodeVisitor):
@@ -210,6 +145,7 @@ class CheckConstExpr(ast.NodeVisitor):
         'A UnaryOp is a const expr if its operand is'
         return self.visit(node.operand)
 
+
 class ConstFolding(ast.NodeTransformer):
     """
     Applies constant folding on an ast.
@@ -217,7 +153,6 @@ class ConstFolding(ast.NodeTransformer):
     """
 
     def __init__(self, node, mod):
-
         'Gather constant expressions'
         analyzer = GetConstExpr()
         analyzer.visit(node)
@@ -262,7 +197,6 @@ class ConstFolding(ast.NodeTransformer):
         rest_values.append(new_node)
         return ast.BoolOp(node.op, rest_values)
 
-
     def visit_UnaryOp(self, node):
         'Same idea as visit_BinOp'
         if node in self.constexpr:
@@ -304,7 +238,6 @@ class ReplaceBitwiseOp(ast.NodeTransformer):
         if isinstance(node.op, ast.RShift):
             return ast.Call(ast.Name('mrshift', ast.Load()),
                             [node.left, node.right], [], None, None)
-
         return node
 
     def visit_UnaryOp(self, node):
@@ -312,7 +245,6 @@ class ReplaceBitwiseOp(ast.NodeTransformer):
         if isinstance(node.op, ast.Invert):
             return ast.Call(ast.Name('mnot', ast.Load()),
                             [node.operand], [], None, None)
-
         return node
 
 
@@ -361,95 +293,6 @@ class GetConstMod(ast.NodeTransformer):
     def visit_Num(self, node):
         node.n = node.n % 2**self.nbits
         return self.generic_visit(node)
-
-
-class ChangePow(ast.NodeTransformer):
-    """
-    Replace X**n with X*X*...*X (n times) for any expression X.
-    """
-
-    def visit_BinOp(self, node):
-        if isinstance(node.op, ast.Pow):
-            if isinstance(node.left, ast.Num):
-                operand = node.right
-                num = node.left.n
-            else:
-                operand = node.left
-                num = node.right.n
-            node = copy.deepcopy(operand)
-            for i in range(num-1):
-                node = ast.BinOp(operand, ast.Mult(), node)
-        return self.generic_visit(node)
-
-
-class AddFinalMod(ast.NodeTransformer):
-    """
-    Inserts "& (2**n - 1)" around the expression.
-    """
-
-    def __init__(self, nbits):
-        'Init number of bits n'
-        self.nbits = nbits
-
-    def visit_Expr(self, node):
-        'Insert & 0xFF...FF around the expression'
-        self.generic_visit(node)
-        node.value = ast.BinOp(node.value, ast.BitAnd(),
-                               ast.Num(2**self.nbits - 1))
-        return node
-
-
-class MarkAndConst(ast.NodeTransformer):
-    """
-    Mark nodes of the type (X & e), with X expression and e constant.
-    Used for bitflip.
-    """
-
-    def visit_BinOp(self, node):
-        'Add atributes "andconst" = const to nodes of type (X & e)'
-        if isinstance(node.op, ast.BitAnd):
-            if (isinstance(node.left, ast.Num) and
-                    not isinstance(node.right, ast.Num)):
-                const = node.left.n
-                operand = node.right
-            elif (isinstance(node.right, ast.Num) and
-                  not isinstance(node.left, ast.Num)):
-                const = node.right.n
-                operand = node.left
-            else:
-                return self.generic_visit(node)
-            setattr(operand, 'andconst', const)
-        return self.generic_visit(node)
-
-
-class MakeSign(ast.NodeVisitor):
-    """
-    Create a signature for a node that can be used for comparison.
-    """
-
-    def visit_Name(self, node):
-        'Return the name of the variable'
-        return node.id
-
-    def visit_Num(self, node):
-        'Return number represented by the node'
-        return node.n
-
-    def visit_BinOp(self, node):
-        'Return operator plus ordered operands if commutative operator'
-        child_key = (self.visit(node.left), self.visit(node.right))
-        # if operation is commutative, we can order operands
-        if isinstance(node.op, (ast.BitAnd, ast.BitOr, ast.BitXor,
-                                ast.Add, ast.Mult)):
-            if child_key[0] > child_key[1]:
-                child_key = (child_key[1], child_key[0])
-        return (type(node.op),) + child_key
-
-    def visit_BoolOp(self, node):
-        'Return operator plus ordered operands'
-        # we suppose that operation of BoolOp is always commutative
-        child_key = tuple(sorted(self.visit(child) for child in node.values))
-        return (type(node.op),) + child_key
 
 
 class Comparator(object):
@@ -557,76 +400,6 @@ class Comparator(object):
     def visit_Num(self, node1, node2):
         'Check num value'
         return node1.n == node2.n
-
-
-class DistributeMult(ast.NodeTransformer):
-    """
-    Distribute a number "a" on a expression.
-    For example, 3 distributed over (x + 2 + (x & y)) =
-    (3*x + 6 + (x & y)*3)
-    """
-
-    def __init__(self, a):
-        'Init coefficient to distribute'
-        self.a = a
-
-    def visit_BinOp(self, node):
-        'Distribute a on different parts of node'
-        if isinstance(node.op, (ast.Add, ast.Sub)):
-            self.generic_visit(node)
-
-        # if node is a multiplication with at least one integer, we
-        # can compute this integer *a
-        # we do it "manually" because previous constant folding will
-        # not always be efficient depending on the order of the
-        # operands
-        elif isinstance(node.op, ast.Mult):
-            if isinstance(node.left, ast.Num):
-                node.left.n *= self.a
-            elif isinstance(node.right, ast.Num):
-                node.right.n *= self.a
-            else:
-                node = ast.BinOp(node, ast.Mult(), ast.Num(self.a))
-        else:
-            node = ast.BinOp(node, ast.Mult(), ast.Num(self.a))
-        return node
-
-    def visit_Num(self, node):
-        node.n *= self.a
-        return node
-
-    def visit_Name(self, node):
-        return ast.BinOp(node, ast.Mult(), ast.Num(self.a))
-
-
-class OrderChildren(ast.NodeTransformer):
-    """
-    Order an expression according to their signatures.
-    """
-
-    def visit_BoolOp(self, node):
-        self.generic_visit(node)
-        if isinstance(node.op, (ast.BitAnd, ast.BitOr, ast.BitXor,
-                                ast.Add, ast.Mult)):
-            signs = {}
-            for child in node.values:
-                signs[child] = MakeSign().visit(child)
-            node.values = map(operator.itemgetter(0),
-                              sorted(signs.items(),
-                                     key=operator.itemgetter(1)))
-            return node
-
-    def visit_BinOp(self, node):
-        self.generic_visit(node)
-        if isinstance(node.op, (ast.BitAnd, ast.BitOr, ast.BitXor,
-                               ast.Add, ast.Mult)):
-            signleft = MakeSign().visit(node.left)
-            signright = MakeSign().visit(node.right)
-            if signleft > signright:
-                tmp = node.right
-                node.right = node.left
-                node.left = tmp
-        return node
 
 
 def order_ast(asttarget):

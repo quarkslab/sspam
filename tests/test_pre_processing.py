@@ -61,5 +61,21 @@ class TestSubToMult(AstCompCase):
         self.generic_AstCompTest(tests, pre_processing.SubToMult())
 
 
+class RemoveUselessAnd(AstCompCase):
+    """
+    Test pre-processing removing AND 0xFF...FF
+    """
+
+    def test_Basics(self):
+        'Simple tests for removing useless ands'
+        tests = [("x & 255", "x", 8), ("x & 255", "x & 255", 32),
+                 ("x & 65535", "x", 16), ("x & 255", "x & 255", 16)]
+        for instring, refstring, nbits in tests:
+            remov = pre_processing.RemoveUselessAnd(ast.parse(refstring),
+                                                    nbits)
+            self.generic_AstCompTest(instring, refstring, remov)
+
+
+
 if __name__ == '__main__':
     unittest.main()

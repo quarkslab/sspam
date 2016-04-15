@@ -1,3 +1,4 @@
 build/*
 sspam.egg-info/*
 dist/*
+.cache/*
