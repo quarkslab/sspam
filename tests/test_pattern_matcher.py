@@ -1,51 +1,18 @@
-"""Tests for sspam lib.
+"""Tests for pattern matcher script.
 
-This module contains tests for all the main functions and classes of
-the "sspam" lib.
+This module contains tests for the pattern matcher module.
 
 Tested features are:
- - pre_processing.py with TestShiftMult and TestOrderAst
- - pattern_matcher.py with TestPatternMatcher, TestPatternIncluded
-   and TestMatch
+  - pure pattern matcher with various situations
+  - pattern replacement
 """
 
 import ast
-import os
 import unittest
 
-from sspam import *
+from sspam import pattern_matcher, pre_processing
 from sspam.tools import asttools, leveling
-import templates
 
-
-# tests of pre-processing
-
-class TestShiftMult(templates.AstCompCase):
-    """
-    Test pre-processing that transforms shifts in mults.
-    """
-
-    def test_Basics(self):
-        'Simple tests for shift -> mult replacement'
-        tests = [("x << 1", "x*2"), ("(y*32) << 1", "(y*32)*2"),
-                 ("var << 4", "var*16"), ("3 << var", "3 << var"),
-                 ("(x ^ y) + (x << 1)", "(x ^ y) + 2*x")]
-        self.generic_AstCompTest(tests, pre_processing.ShiftToMult())
-
-
-class TestSubToMult(templates.AstCompCase):
-    """
-    Test pre-processing that transforms subs in mults of -1.
-    """
-
-    def test_Basics(self):
-        'Simple tests for sub -> -1 mult replacement'
-        tests = [("-x", "(-1)*x"), ("x - 3", "x + (-1)*3"),
-                 ("- x - y", "(-1)*x + (-1)*y")]
-        self.generic_AstCompTest(tests, pre_processing.SubToMult())
-
-
-# tests for PatternMatcher
 
 class TestPatternMatcher(unittest.TestCase):
     """
@@ -319,98 +286,6 @@ class TestPatternReplacement(unittest.TestCase):
         rep = pattern_matcher.PatternReplacement(patt_ast, input_ast, rep_ast)
         input_ast = rep.visit(input_ast)
         self.assertTrue(asttools.Comparator().visit(input_ast, ref_ast))
-
-
-# test of arithm_simpl
-
-class TestArithSimplifier(unittest.TestCase):
-    """
-    Tests for arithm_simplifier function.
-    """
-
-    def generic_test(self, input_ast, ref_ast, nbits):
-        'Generic test for arithmetic simplification'
-        output_ast = arithm_simpl.main(input_ast, nbits)
-        self.assertTrue(asttools.Comparator().visit(output_ast, ref_ast))
-
-    def test_simple(self):
-        'Some basics tests'
-
-        nbits = 8
-        tests = [("x", "x"), ("x + 3 - 3", "x"), ("x + x*y - x*y", "x"),
-                 ("x + 45 + 243", "x + 32")]
-        for input_string, ref_string in tests:
-            input_ast = ast.parse(input_string, mode='eval')
-            ref_ast = ast.parse(ref_string, mode='eval')
-            self.generic_test(input_ast, ref_ast, nbits)
-        # test with ast.Module
-        for input_string, ref_string in tests:
-            input_ast = ast.parse(input_string)
-            ref_ast = ast.parse(ref_string)
-            self.generic_test(input_ast, ref_ast, nbits)
-
-
-# tests for generic simplifier
-
-class TestSimplifier(unittest.TestCase):
-    """
-    Tests for Simplifier script.
-    """
-
-    def generic_test(self, expr, refstring, nbits=0):
-        'Generic test for simplifier script'
-        output_string = simplifier.simplify(expr, nbits)
-        output = ast.parse(output_string)
-        ref = ast.parse(refstring)
-        self.assertTrue(asttools.Comparator().visit(output, ref))
-
-    def test_input_file(self):
-        'Test with file as an input'
-        testfile = open("input.py", 'w')
-        testfile.write("(4211719010 ^ 2937410391*x)" +
-                       "+ 2*(2937410391*x | 83248285) + 4064867995")
-        testfile.close()
-        self.generic_test("input.py", "(4148116279 + (2937410391 * x))")
-        os.remove("input.py")
-
-    def test_basics(self):
-        'Some basics tests'
-        tests = [("45 + x + 32", "(77 + x)"), ("x + x + x", "(3 * x)"),
-                 ("""
-a = 3 + x + 0
-b = 4 + x - x + x
-c = - 7 + a + b""",
-                  """a = (3 + x)
-b = (4 + x)
-c = (2 * x)""")]
-        for input_args, refstring in tests:
-            self.generic_test(input_args, refstring)
-
-    def test_real(self):
-        'Tests based on real events'
-        tests = [("(4211719010 ^ 2937410391*x) + " +
-                   "2*(2937410391*x | 83248285) + 4064867995",
-                  "(4148116279 + (2937410391 * x))"),
-                 ("(2937410391*x | 3393925841) - " +
-                   "((2937410391*x) & 901041454) + 638264265*y",
-                  "(3393925841 + (638264265 * y))"),
-                 ("(2937410391*x | 3393925841) + 638264265*y" +
-                   "- ((2937410391 * x) & 901041454)",
-                  "(3393925841 + (638264265 * y))")]
-
-        for input_args, refstring in tests:
-            self.generic_test(input_args, refstring)
-
-    def test_samples(self):
-        'Tests on real samples'
-        samples_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "samples")
-        for samplefilename in os.listdir(samples_dir):
-            fname = os.path.join(samples_dir, samplefilename)
-            samplefile = open(fname, 'r')
-            refstring = samplefile.readline()[2:-1]
-            output_string = simplifier.simplify(fname).split('\n')[-1]
-            self.assertTrue(refstring == output_string)
 
 
 if __name__ == '__main__':
