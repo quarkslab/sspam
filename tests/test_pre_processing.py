@@ -9,34 +9,10 @@ import unittest
 
 from sspam import pre_processing
 from sspam.tools import asttools
+import templates
 
 
-class AstCompCase(unittest.TestCase):
-    """
-    Generic method to compare obfuscated ast and original ast.
-    """
-
-    def generic_AstCompTest(self, *args):
-        """Args: (tests, transformer) with tests a list,
-        or (input_string, refstring, transformer)"""
-
-        if len(args) != 2 and len(args) != 3:
-            raise Exception("generic_AstTest should be " +
-                            "called with 3 or 4 arguments")
-        if len(args) == 2:
-            tests = args[0]
-            transformer = args[1]
-        else:
-            tests = [(args[0], args[1])]
-            transformer = args[2]
-        for origstring, refstring in tests:
-            orig = ast.parse(origstring)
-            ref = ast.parse(refstring)
-            orig = transformer.visit(orig)
-            self.assertTrue(asttools.Comparator().visit(orig, ref))
-
-
-class TestShiftMult(AstCompCase):
+class TestShiftMult(templates.AstCompCase):
     """
     Test pre-processing that transforms shifts in mults.
     """
@@ -49,7 +25,7 @@ class TestShiftMult(AstCompCase):
         self.generic_AstCompTest(tests, pre_processing.ShiftToMult())
 
 
-class TestSubToMult(AstCompCase):
+class TestSubToMult(templates.AstCompCase):
     """
     Test pre-processing that transforms subs in mults of -1.
     """
@@ -61,7 +37,7 @@ class TestSubToMult(AstCompCase):
         self.generic_AstCompTest(tests, pre_processing.SubToMult())
 
 
-class RemoveUselessAnd(AstCompCase):
+class RemoveUselessAnd(templates.AstCompCase):
     """
     Test pre-processing removing AND 0xFF...FF
     """
@@ -74,7 +50,6 @@ class RemoveUselessAnd(AstCompCase):
             remov = pre_processing.RemoveUselessAnd(ast.parse(refstring),
                                                     nbits)
             self.generic_AstCompTest(instring, refstring, remov)
-
 
 
 if __name__ == '__main__':

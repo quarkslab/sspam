@@ -400,11 +400,3 @@ class Comparator(object):
     def visit_Num(self, node1, node2):
         'Check num value'
         return node1.n == node2.n
-
-
-def order_ast(asttarget):
-    'Apply leveling and ordering of children'
-    leveling.LevelOperators().visit(asttarget)
-    OrderChildren().visit(asttarget)
-    leveling.Unleveling().visit(asttarget)
-    return asttarget
