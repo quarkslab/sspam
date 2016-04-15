@@ -9,13 +9,13 @@ Requirements
 
 To use sspam, you need:
 
- * z3
-   - Compile it from https://github.com/Z3Prover/z3
-   - Or download a release from
-     https://github.com/Z3Prover/z3/releases and add the bin/
-     directory to your PYTHONPATH
+* z3
+  * Compile it from https://github.com/Z3Prover/z3
+  * Or download a release from
+    https://github.com/Z3Prover/z3/releases and add the bin/
+    directory to your PYTHONPATH
 
- * sympy: install it with `pip install sympy`
+* sympy: install it with `pip install sympy`
 
 
 
