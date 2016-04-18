@@ -5,13 +5,13 @@ Works the magic.
 """
 
 import ast
+import astunparse
 import argparse
 import copy
 import sys
-import StringIO
 import os.path
 
-from sspam.tools import asttools, unparse, leveling
+from sspam.tools import asttools, leveling
 import pattern_matcher
 import pre_processing
 import arithm_simpl
@@ -75,7 +75,7 @@ class Simplifier(ast.NodeTransformer):
         'Apply pattern matching and arithmetic simplification'
         if debug:
             print "before: "
-            unparse.Unparser(expr_ast)
+            print astunparse.unparse(expr_ast)
             print ""
         expr_ast = pre_processing.all_preprocessings(expr_ast, self.nbits)
         expr_ast = pre_processing.NotToInv().visit(expr_ast)
@@ -88,11 +88,11 @@ class Simplifier(ast.NodeTransformer):
                 if not asttools.Comparator().visit(new_ast, expr_ast):
                     print "replaced! "
 
-                    unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(expr_ast)))
-                    unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(new_ast)))
+                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(expr_ast)))
+                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(new_ast)))
                     print "before:   ", ast.dump(expr_ast)
                     print "pattern:  ", ast.dump(pattern)
-                    unparse.Unparser(leveling.Unleveling().visit(copy.deepcopy(pattern)))
+                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(pattern)))
                     print ""
                     print ""
                     print "after:    ", ast.dump(new_ast)
@@ -105,13 +105,13 @@ class Simplifier(ast.NodeTransformer):
         expr_ast = leveling.Unleveling().visit(expr_ast)
         if debug:
             print "after PM: "
-            unparse.Unparser(expr_ast)
+            print astunparse.unparse(expr_ast)
             print ""
         expr_ast = arithm_simpl.main(expr_ast, nbits)
         expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
         if debug:
             print "arithm simpl: "
-            unparse.Unparser(expr_ast)
+            print astunparse.unparse(expr_ast)
             print ""
             print "-"*80
         return expr_ast
@@ -177,11 +177,7 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
     else:
         rules_list = default_rules + custom_rules
     expr_ast = Simplifier(nbits, rules_list).visit(expr_ast)
-    output = StringIO.StringIO()
-    unparse.Unparser(expr_ast, output)
-    expr = output.getvalue()[1::]
-    output.close()
-    return expr
+    return astunparse.unparse(expr_ast)
 
 
 if __name__ == "__main__":

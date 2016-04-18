@@ -11,7 +11,8 @@ Classes included in this module are:
 
 import ast
 import copy
-from tools import asttools, unparse
+
+from tools import asttools
 
 
 class ShiftToMult(ast.NodeTransformer):

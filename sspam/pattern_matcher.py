@@ -19,13 +19,14 @@ Classes and methods included in this module are:
 import ast
 import copy
 import itertools
+import astunparse
 
 try:
     import z3
 except ImportError:
     raise Exception("z3 module is needed to use this pattern matcher")
 
-from tools import asttools, unparse, leveling
+from tools import asttools, leveling
 import pre_processing
 
 
@@ -493,5 +494,4 @@ if __name__ == '__main__':
     # print "-"*80
     res = replace(test, patt_string, rep)
     print ast.dump(res)
-    unparse.Unparser(res)
-    print ""
+    print astunparse.unparse(res)

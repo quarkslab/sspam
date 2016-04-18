@@ -17,6 +17,7 @@ To use sspam, you need:
 
 * sympy: install it with `pip install sympy`
 
+* astunparse: install it with `pip install astunparse`
 
 
 Using sspam

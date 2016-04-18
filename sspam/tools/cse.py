@@ -11,7 +11,7 @@ import os
 import itertools
 import StringIO
 
-import asttools, unparse
+import asttools
 
 
 COMMUTATIVE_OPERATORS = ast.Add, ast.Mult, ast.BitOr, ast.BitXor, ast.BitAnd
@@ -393,12 +393,11 @@ def apply_cse(expr, outputfile=None):
     result_expr = PromoteUnaryOp().visit(expr_ast)
     simple_cse(expr_ast, timeout=None)
     expr_ast = PostProcessing().visit(expr_ast)
-    output = StringIO.StringIO()
-    unparse.Unparser(expr_ast, output)
-    expr = output.getvalue()[1::]
-    output.close()
+    expr = astunparse.unparse(expr_ast, output)
     if outputfile:
-        unparse.Unparser(expr_ast, open(outputfile, 'w'))
+        f = open(outputfile, 'w')
+        f.write(expr)
+        f.close()
     return expr
 
 
