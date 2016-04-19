@@ -2,16 +2,16 @@ sspam: Symbolic Simplification with PAttern Matching
 ====================================================
 
 For some sort of roadmap with developpement ideas:
-http://libreboard.dmz.qb/b/w5JbCyxXdciWN8rGQ/sspam
+[SSPAM libreboard (internal QB)](http://libreboard.dmz.qb/b/w5JbCyxXdciWN8rGQ/sspam)
 
 
 Requirements
 ------------
 To use sspam, you need:
 
-* [z3](https://github.com/Z3Prover/z3)
-* [sympy](http://www.sympy.org/fr/index.html)
-* [astunparse](https://github.com/simonpercivall/astunparse)
+* The SMT solver [z3](https://github.com/Z3Prover/z3)
+* The Python library for symbolic mathematics [sympy](http://www.sympy.org/fr/index.html)
+* The Python module for ast unparsing [astunparse](https://github.com/simonpercivall/astunparse)
 
 
 Installation
@@ -22,7 +22,7 @@ Installation
 * To install z3, you can either:
  * Compile it from [source](https://github.com/Z3Prover/z3)
  * Or download a [release](https://github.com/Z3Prover/z3/releases) and
-  add the bin/ directory to your `$PYTHONPATH`
+  add the `bin/` directory to your `$PYTHONPATH`
 
 * To install SSPAM:
 
@@ -49,7 +49,6 @@ Or in a python script:
 from sspam import simplifier
 
 print simplifier.simplify("(x & y) + (x | y)")
-
 ```
 
 You'll see a few examples of utilisation of sspam in the examples/
@@ -57,3 +56,14 @@ directory.
 
 Know that expressions passed to the simplifier should be in
 cse form (a list of assignment), as provided by the cse module.
+
+
+Tests
+-----
+
+To run tests of sspam:
+
+```
+$ cd tests/
+$ python run_all_tests.py
+```

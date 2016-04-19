@@ -9,4 +9,6 @@ parser.add_argument("expr", type=str, help="expression to simplify")
 parser.add_argument("-n", dest="nbits", type=int,
                     help="number of bits of the variables (default is 8)")
 args = parser.parse_args()
+print ""
 print simplifier.simplify(args.expr, args.nbits)
+print ""

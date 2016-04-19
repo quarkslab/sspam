@@ -3,6 +3,7 @@ CSE script written by Serge!
 """
 
 import ast
+import astunparse
 import functools
 from copy import deepcopy
 from time import time
@@ -393,7 +394,7 @@ def apply_cse(expr, outputfile=None):
     result_expr = PromoteUnaryOp().visit(expr_ast)
     simple_cse(expr_ast, timeout=None)
     expr_ast = PostProcessing().visit(expr_ast)
-    expr = astunparse.unparse(expr_ast, output)
+    expr = astunparse.unparse(expr_ast).strip('\n')
     if outputfile:
         f = open(outputfile, 'w')
         f.write(expr)
