@@ -5,5 +5,6 @@ from distutils.core import setup
 setup(
     name='sspam',
     description='Symbolic Simplification with PAttern Matching',
-    packages=["sspam", "sspam.tools"]
+    packages=["sspam", "sspam.tools"],
+    scripts=["bin/sspam"]
 )

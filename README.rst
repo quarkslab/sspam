@@ -1,28 +1,59 @@
-This is sspam: Symbolic Simplification with PAttern Matching.
+sspam: Symbolic Simplification with PAttern Matching
+====================================================
 
-For some sort of roadmap:
+For some sort of roadmap with developpement ideas:
 http://libreboard.dmz.qb/b/w5JbCyxXdciWN8rGQ/sspam
 
 
 Requirements
--------------
-
+------------
 To use sspam, you need:
 
-* z3
-  * Compile it from https://github.com/Z3Prover/z3
-  * Or download a release from
-    https://github.com/Z3Prover/z3/releases and add the bin/
-    directory to your PYTHONPATH
+* [z3](https://github.com/Z3Prover/z3)
+* [sympy](http://www.sympy.org/fr/index.html)
+* [astunparse](https://github.com/simonpercivall/astunparse)
 
-* sympy: install it with `pip install sympy`
 
-* astunparse: install it with `pip install astunparse`
+Installation
+------------
 
+* You can install sympy and astunparse with `pip install -r requirements.txt`
+
+* To install z3, you can either:
+ * Compile it from [source](https://github.com/Z3Prover/z3)
+ * Or download a [release](https://github.com/Z3Prover/z3/releases) and
+  add the bin/ directory to your `$PYTHONPATH`
+
+* To install SSPAM:
+
+```
+$ cd sspam_directory
+$ sudo python setup.py install
+```
 
 Using sspam
 ------------
 
+You can use sspam either with the command line:
+
+```
+$ sspam "(x & y) + (x | y)"
+
+(x + y)
+
+```
+
+Or in a python script:
+
+```
+from sspam import simplifier
+
+print simplifier.simplify("(x & y) + (x | y)")
+
+```
+
 You'll see a few examples of utilisation of sspam in the examples/
-directory. Know that expressions passed to the simplifier should be in
+directory.
+
+Know that expressions passed to the simplifier should be in
 cse form (a list of assignment), as provided by the cse module.
