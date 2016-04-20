@@ -5,13 +5,12 @@ Works the magic.
 """
 
 import ast
-import astunparse
+from astunparse import unparse
 import argparse
-import copy
-import sys
+from copy import deepcopy
 import os.path
 
-from sspam.tools import asttools, leveling
+from sspam.tools import asttools
 import pattern_matcher
 import pre_processing
 import arithm_simpl
@@ -41,8 +40,7 @@ default_rules = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
                  ("A + B + 2*(~A | ~B)", "(A ^ B) - 2"),
                  # makes test_my_mba.py fail if higher in the list
                  ("((2*A + 1) & 2*B)", "(2*A & 2*B)"),
-                 ("2*(A ^ 127)", "2*(~A)")
-]
+                 ("2*(A ^ 127)", "2*(~A)")]
 
 
 debug = False
@@ -67,7 +65,7 @@ class Simplifier(ast.NodeTransformer):
         for pattern, replace in rules_list:
             patt_ast = ast.parse(pattern, mode="eval").body
             patt_ast = pre_processing.all_preprocessings(patt_ast, self.nbits)
-            patt_ast = leveling.LevelOperators(ast.Add).visit(patt_ast)
+            patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
             rep_ast = ast.parse(replace, mode="eval").body
             self.patterns.append((patt_ast, rep_ast))
 
@@ -75,43 +73,46 @@ class Simplifier(ast.NodeTransformer):
         'Apply pattern matching and arithmetic simplification'
         if debug:
             print "before: "
-            print astunparse.unparse(expr_ast)
+            print unparse(expr_ast)
             print ""
         expr_ast = pre_processing.all_preprocessings(expr_ast, self.nbits)
         expr_ast = pre_processing.NotToInv().visit(expr_ast)
-        expr_ast = leveling.LevelOperators(ast.Add).visit(expr_ast)
-        for pattern, replacement in self.patterns:
-            rep = pattern_matcher.PatternReplacement(pattern, expr_ast, replacement)
-            new_ast = copy.deepcopy(expr_ast)
-            new_ast = rep.visit(new_ast)
+        expr_ast = asttools.LevelOperators(ast.Add).visit(expr_ast)
+        for pattern, repl in self.patterns:
+            rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)
+            new_ast = rep.visit(deepcopy(expr_ast))
             if debug:
                 if not asttools.Comparator().visit(new_ast, expr_ast):
                     print "replaced! "
-
-                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(expr_ast)))
-                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(new_ast)))
+                    expr_debug = deepcopy(expr_ast)
+                    expr_debug = asttools.Unleveling().visit(expr_debug)
+                    print unparse(expr_debug)
+                    new_debug = deepcopy(new_ast)
+                    new_debug = asttools.Unleveling().visit(new_debug)
+                    print unparse(new_debug)
                     print "before:   ", ast.dump(expr_ast)
                     print "pattern:  ", ast.dump(pattern)
-                    print astunparse.unparse(leveling.Unleveling().visit(copy.deepcopy(pattern)))
+                    patt_debug = asttools.Unleveling().visit(deepcopy(pattern))
+                    print unparse(patt_debug)
                     print ""
                     print ""
                     print "after:    ", ast.dump(new_ast)
                     print ""
             expr_ast = new_ast
         # this is ugly, should be "generalized"
-        expr_ast = leveling.LevelOperators(ast.BitXor).visit(expr_ast)
+        expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
         expr_ast = asttools.ConstFolding(expr_ast,
                                          2**self.nbits).visit(expr_ast)
-        expr_ast = leveling.Unleveling().visit(expr_ast)
+        expr_ast = asttools.Unleveling().visit(expr_ast)
         if debug:
             print "after PM: "
-            print astunparse.unparse(expr_ast)
+            print unparse(expr_ast)
             print ""
         expr_ast = arithm_simpl.main(expr_ast, nbits)
         expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
         if debug:
             print "arithm simpl: "
-            print astunparse.unparse(expr_ast)
+            print unparse(expr_ast)
             print ""
             print "-"*80
         return expr_ast
@@ -122,22 +123,22 @@ class Simplifier(ast.NodeTransformer):
         # use EvalPattern to replace known variables
         node.value = pattern_matcher.EvalPattern(
             self.context).visit(node.value)
-        old_value = copy.deepcopy(node.value)
+        old_value = deepcopy(node.value)
         node.value = self.simplify(node.value, self.nbits)
         # simplify until fixpoint is reached
         while not asttools.Comparator().visit(old_value, node.value):
-            old_value = copy.deepcopy(node.value)
+            old_value = deepcopy(node.value)
             node.value = self.simplify(node.value, self.nbits)
         for target in node.targets:
             self.context[target.id] = node.value
         return node
 
     def visit_Expr(self, node):
-        old_value = copy.deepcopy(node.value)
+        old_value = deepcopy(node.value)
         node.value = self.simplify(node.value, self.nbits)
         # simplify until fixpoint is reached
         while not asttools.Comparator().visit(old_value, node.value):
-            old_value = copy.deepcopy(node.value)
+            old_value = deepcopy(node.value)
             node.value = self.simplify(node.value, self.nbits)
         return node
 
@@ -177,7 +178,7 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
     else:
         rules_list = default_rules + custom_rules
     expr_ast = Simplifier(nbits, rules_list).visit(expr_ast)
-    return astunparse.unparse(expr_ast).strip('\n')
+    return unparse(expr_ast).strip('\n')
 
 
 if __name__ == "__main__":

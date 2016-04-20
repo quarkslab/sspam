@@ -6,39 +6,18 @@ import ast
 import astunparse
 import functools
 from copy import deepcopy
-from time import time
 import sys
 import os
 import itertools
-import StringIO
 
 import asttools
 
 
 COMMUTATIVE_OPERATORS = ast.Add, ast.Mult, ast.BitOr, ast.BitXor, ast.BitAnd
 ASSOCIATIVE_OPERATORS = COMMUTATIVE_OPERATORS
-BINARY_OPERATORS = COMMUTATIVE_OPERATORS + (ast.Sub, ast.LShift, ast.RShift, ast.Div)
+BINARY_OPERATORS = COMMUTATIVE_OPERATORS + (ast.Sub, ast.LShift,
+                                            ast.RShift, ast.Div)
 # some operators are not considered: pow, matmult etc
-
-
-class UseCount(ast.NodeVisitor):
-    '''
-    Basic value usage analysis
-
-    Register, for each variable, the number of times it is used,
-    based on the same assumptions as in ForwardSubstitute
-    '''
-
-    def __init__(self):
-        self.result = {}
-
-    def visit_Name(self, node):
-        if isinstance(node.ctx, ast.Load):
-            self.result[node.id] = self.result.get(node.id, 0) + 1
-
-    def run(self, node):
-        self.visit(node)
-        return self.result
 
 
 class ForwardSubstitute(ast.NodeTransformer):
@@ -80,10 +59,11 @@ class ForwardSubstitute(ast.NodeTransformer):
                 self.use_count[targetid] += self.use_count[node.value.id]
                 self.use_count[node.value.id] = self.use_count[targetid]
 
-
             if node.value.id in self.substitutions:
                 sub = self.substitutions[node.value.id]
-                if self.use_count[targetid] == 1 or isinstance(sub, (ast.Name, ast.Num)):
+                cond = (self.use_count[targetid] == 1 or
+                        isinstance(sub, (ast.Name, ast.Num)))
+                if cond:
                     self.substitutions[targetid] = sub
                     return None
                 else:
@@ -145,7 +125,7 @@ def node_hash(node):
         return str(node.n),
     if isinstance(node, ast.BinOp):
         children = [node_hash(node.left), node_hash(node.right)]
-        if isinstance(node.op, COMMUTATIVE_OPERATORS): # commutative
+        if isinstance(node.op, COMMUTATIVE_OPERATORS):  # commutative
             children.sort()
         return (type(node.op).__name__,) + tuple(children)
     assert False, 'unhandled node type' + ast.dump(node)
@@ -165,21 +145,22 @@ class PromoteUnaryOp(ast.NodeTransformer):
         assert False, 'unhandled node type: ' + ast.dump(node)
 
 
-
 class Substitute(ast.NodeTransformer):
     '''
     Perform node substitution after cse
 
-    I.e. add extra assigments and use the assigned value in the original expression
+    I.e. add extra assigments and use the assigned value in the
+    original expression
+
     '''
 
-    def __init__(self, prefix, op, term_to_node, rewritten_terms, result_nodes):
+    def __init__(self, prefix, op, term_to_node,
+                 rewritten_terms, result_nodes):
         self.prefix = prefix
         self.op = op
         self.rewrite = dict()
         self.assigned_values = set()
 
-        target_ids = set()
         assigns = {}
         for terms_part, result_node in zip(rewritten_terms, result_nodes):
             if result_node in self.rewrite:
@@ -203,11 +184,13 @@ class Substitute(ast.NodeTransformer):
                         new_node = ast.BinOp(new_node, self.op(), new_subnode)
                     else:
                         new_node = new_subnode
-
-            new_assigns = [ast.Assign([ast.Name(target.id, ast.Store())], value)
-                       for target, value
-                       in zip(ordered_assign_values, [functools.reduce(lambda x,y:ast.BinOp(x, self.op(), y), [term_to_node[term] for term in terms]) for terms in ordered_assign_keys])
-                      ]
+            binlamb = lambda x, y: ast.BinOp(x, self.op(), y)
+            new_assigns = [ast.Assign([ast.Name(target.id, ast.Store())], val)
+                           for target, val in
+                           zip(ordered_assign_values,
+                               [functools.reduce(binlamb, [term_to_node[term]
+                                                           for term in terms])
+                                for terms in ordered_assign_keys])]
             self.rewrite[result_node] = new_node, new_assigns
 
     def visit_TopLevelStmt(self, node):
@@ -268,7 +251,6 @@ class GatherOpClasses(ast.NodeVisitor):
             terms.append(tuple(terms_part))
         return terms
 
-
     def from_terms(self, terms):
         nodes = []
         for terms_part in terms:
@@ -278,12 +260,14 @@ class GatherOpClasses(ast.NodeVisitor):
             nodes.append(nodes_part)
         return nodes
 
-
     def visit_BinOp(self, node, partial=False):
         if isinstance(node.op, self.op):
             operands = []
             for child in node.left, node.right:
-                if isinstance(child, ast.BinOp) and isinstance(child.op, self.op) and self.op in ASSOCIATIVE_OPERATORS:
+                cond = (isinstance(child, ast.BinOp)
+                        and isinstance(child.op, self.op)
+                        and self.op in ASSOCIATIVE_OPERATORS)
+                if cond:
                     operands.extend(self.visit_BinOp(child, partial=True))
                 else:
                     self.visit(child)
@@ -295,7 +279,6 @@ class GatherOpClasses(ast.NodeVisitor):
         else:
             self.generic_visit(node)
             return []
-
 
 
 def simple_cse(node, operators=BINARY_OPERATORS, timeout=None):
@@ -330,7 +313,8 @@ def simple_cse(node, operators=BINARY_OPERATORS, timeout=None):
                         new_term.append(tuple(term))
                     new_terms.append(tuple(new_term))
 
-                Substitute(prefix, op, goc.term_to_node, new_terms, goc.result_nodes).visit(node)
+                Substitute(prefix, op, goc.term_to_node,
+                           new_terms, goc.result_nodes).visit(node)
                 ForwardSubstitute().run(node)
                 cse_generation(op, generation + 1)
 
@@ -377,7 +361,8 @@ class PostProcessing(ast.NodeTransformer):
             return node
 
     def visit_Expr(self, node):
-        return ast.Assign([ast.Name('result', ast.Store())], self.generic_visit(node.value))
+        return ast.Assign([ast.Name('result', ast.Store())],
+                          self.generic_visit(node.value))
 
 
 def apply_cse(expr, outputfile=None):
@@ -391,7 +376,7 @@ def apply_cse(expr, outputfile=None):
     else:
         expr_ast = ast.parse(expr)
 
-    result_expr = PromoteUnaryOp().visit(expr_ast)
+    PromoteUnaryOp().visit(expr_ast)
     simple_cse(expr_ast, timeout=None)
     expr_ast = PostProcessing().visit(expr_ast)
     expr = astunparse.unparse(expr_ast).strip('\n')

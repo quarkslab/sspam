@@ -6,6 +6,7 @@ import unittest
 
 from sspam.tools import asttools
 
+
 class AstCompCase(unittest.TestCase):
     """
     Generic method to compare obfuscated ast and original ast.
@@ -29,6 +30,7 @@ class AstCompCase(unittest.TestCase):
             ref = ast.parse(refstring)
             orig = transformer.visit(orig)
             self.assertTrue(asttools.Comparator().visit(orig, ref))
+
 
 class AstVisitorCase(unittest.TestCase):
     """

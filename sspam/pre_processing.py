@@ -10,7 +10,6 @@ Classes included in this module are:
 """
 
 import ast
-import copy
 
 from tools import asttools
 
@@ -42,9 +41,6 @@ class SubToMult(ast.NodeTransformer):
         self.generic_visit(node)
         if isinstance(node.op, ast.Sub):
             node.op = ast.Add()
-            const_mult_cond = (isinstance(node.right, ast.BinOp) and
-                               isinstance(node.right.op, ast.Mult) and
-                               isinstance(node.right.left, ast.Num))
             node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
         return node
 

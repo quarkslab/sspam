@@ -10,7 +10,7 @@
 import ast
 import unittest
 
-from sspam.tools import asttools, leveling
+from sspam.tools import asttools
 import templates
 
 class TestGetVariables(templates.AstVisitorCase):
@@ -74,8 +74,8 @@ class TestConstFolding(unittest.TestCase):
         orig = ast.parse(origstring)
         ref = ast.parse(refstring)
         if lvl:
-            orig = leveling.LevelOperators().visit(orig)
-            ref = leveling.LevelOperators().visit(orig)
+            orig = asttools.LevelOperators().visit(orig)
+            ref = asttools.LevelOperators().visit(orig)
         orig = asttools.ConstFolding(orig, 2**nbits).visit(orig)
         self.assertTrue(asttools.Comparator().visit(orig, ref))
 

@@ -26,7 +26,7 @@ try:
 except ImportError:
     raise Exception("z3 module is needed to use this pattern matcher")
 
-from tools import asttools, leveling
+from tools import asttools
 import pre_processing
 
 
@@ -102,12 +102,12 @@ class PatternMatcher(asttools.Comparator):
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
         target_ast = copy.deepcopy(node1)
-        target_ast = leveling.Unleveling().visit(target_ast)
+        target_ast = asttools.Unleveling().visit(target_ast)
         ast.fix_missing_locations(target_ast)
         code1 = compile(ast.Expression(target_ast), '<string>', mode='eval')
         eval_pattern = copy.deepcopy(node2)
         EvalPattern(self.wildcards).visit(eval_pattern)
-        eval_pattern = leveling.Unleveling().visit(eval_pattern)
+        eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
         gvar = asttools.GetVariables()
         gvar.visit(eval_pattern)
@@ -153,12 +153,12 @@ class PatternMatcher(asttools.Comparator):
         if wil in self.wildcards:
             if not isinstance(self.wildcards[wil], ast.Num):
                 return False
-            exec("%s = z3.BitVecVal(%d, %d)" % (wil, self.wildcards[wil].n, self.nbits))
+            exec("%s = z3.BitVecVal(%d, %d)" % (wil, self.wildcards[wil].n,
+                                                self.nbits))
         else:
             exec("%s = z3.BitVec('%s', %d)" % (wil, wil, self.nbits))
-        target_ast = copy.deepcopy(target)
         eval_pattern = copy.deepcopy(pattern)
-        eval_pattern = leveling.Unleveling().visit(eval_pattern)
+        eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
         code2 = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
         sol = z3.Solver()
@@ -173,24 +173,25 @@ class PatternMatcher(asttools.Comparator):
     def check_pattern(self, target, pattern):
         'Try to match pattern written in different ways'
 
-        if (asttools.CheckConstExpr().visit(pattern)
-            and isinstance(target, ast.Num)):
-            # if pattern is only a constant, evaluate and compare to target
-            pattcopy = copy.deepcopy(pattern)
-            eval_patt = asttools.ConstFolding(pattcopy,
-                                              2**self.nbits).visit(pattcopy)
-            return self.visit(target, eval_patt)
+        if asttools.CheckConstExpr().visit(pattern):
+            if isinstance(target, ast.Num):
+                # if pattern is only a constant, evaluate and compare
+                # to target
+                pattcopy = copy.deepcopy(pattern)
+                eval_pat = asttools.ConstFolding(pattcopy,
+                                                 2**self.nbits).visit(pattcopy)
+                return self.visit(target, eval_pat)
 
         if isinstance(target, ast.Num):
             # check that wildcards in pattern have not been affected
             return self.get_model(target, pattern)
 
-
         # deal with NOT that could have been evaluated before
         if isinstance(pattern, ast.UnaryOp):
-            if (isinstance(pattern.op, ast.Invert)
-                and isinstance(pattern.operand, ast.Name)
-                and pattern.operand.id.isupper()):
+            conds = (isinstance(pattern.op, ast.Invert) and
+                     isinstance(pattern.operand, ast.Name) and
+                     pattern.operand.id.isupper())
+            if conds:
                 wkey = pattern.operand.id
                 if isinstance(target, ast.Num):
                     if wkey not in self.wildcards:
@@ -243,8 +244,9 @@ class PatternMatcher(asttools.Comparator):
 
             # deal with case where wildcard operand and target are const values
             if isinstance(target, ast.Num) and isinstance(operand, ast.Name):
-                if (operand.id in self.wildcards
-                    and isinstance(self.wildcards[operand.id], ast.Num)):
+                conds = (operand.id in self.wildcards and
+                         isinstance(self.wildcards[operand.id], ast.Num))
+                if conds:
                     eva = (self.wildcards[operand.id].n)*2 % 2**(self.nbits)
                     if eva == target.n:
                         return True
@@ -376,10 +378,10 @@ def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
     target_ast = ast.parse(target_str, mode="eval").body
     target_ast = pre_processing.all_preprocessings(target_ast)
-    target_ast = leveling.LevelOperators(ast.Add).visit(target_ast)
+    target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
     pattern_ast = ast.parse(pattern_str, mode="eval").body
     pattern_ast = pre_processing.all_preprocessings(pattern_ast)
-    pattern_ast = leveling.LevelOperators(ast.Add).visit(pattern_ast)
+    pattern_ast = asttools.LevelOperators(ast.Add).visit(pattern_ast)
     return PatternMatcher(target_ast, pattern_ast).visit(target_ast,
                                                          pattern_ast)
 
@@ -421,7 +423,8 @@ class PatternReplacement(ast.NodeTransformer):
         pat = PatternMatcher(node, self.patt_ast, self.nbits)
         matched = pat.visit(node, self.patt_ast)
         if matched:
-            new_node = EvalPattern(pat.wildcards).visit(copy.deepcopy(self.rep_ast))
+            repc = copy.deepcopy(self.rep_ast)
+            new_node = EvalPattern(pat.wildcards).visit(repc)
             return new_node
         else:
             return self.generic_visit(node)
@@ -447,10 +450,10 @@ class PatternReplacement(ast.NodeTransformer):
                     pat = PatternMatcher(testnode, self.patt_ast, self.nbits)
                     matched = pat.visit(testnode, self.patt_ast)
                     if matched:
-                        new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
-                        new_node = ast.BoolOp(node.op, [new_node] + rest)
-                        new_node = leveling.Unleveling().visit(new_node)
-                        return new_node
+                        new = EvalPattern(pat.wildcards).visit(self.rep_ast)
+                        new = ast.BoolOp(node.op, [new] + rest)
+                        new = asttools.Unleveling().visit(new)
+                        return new
             return self.generic_visit(node)
 
         if isinstance(self.patt_ast, ast.BinOp):
@@ -465,7 +468,7 @@ class PatternReplacement(ast.NodeTransformer):
                 if matched:
                     new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
                     new_node = ast.BoolOp(op, [new_node] + rest)
-                    new_node = leveling.Unleveling().visit(new_node)
+                    new_node = asttools.Unleveling().visit(new_node)
                     return new_node
         return self.generic_visit(node)
 
@@ -475,10 +478,10 @@ def replace(target_str, pattern_str, replacement_str):
     target_ast = ast.parse(target_str, mode="eval").body
     target_ast = pre_processing.all_preprocessings(target_ast)
     target_ast = pre_processing.NotToInv().visit(target_ast)
-    target_ast = leveling.LevelOperators(ast.Add).visit(target_ast)
+    target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
     patt_ast = ast.parse(pattern_str, mode="eval").body
     patt_ast = pre_processing.all_preprocessings(patt_ast)
-    patt_ast = leveling.LevelOperators(ast.Add).visit(patt_ast)
+    patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
     rep_ast = ast.parse(replacement_str)
 
     rep = PatternReplacement(patt_ast, target_ast, rep_ast)
@@ -486,8 +489,8 @@ def replace(target_str, pattern_str, replacement_str):
 
 
 if __name__ == '__main__':
-    patt_string =  "A + B + (~A & ~B)"
-    test = "(((x + y) + (((4294967295 * x) + 4294967295) & ((4294967295 * y) + 4294967295)))) + 1"
+    patt_string = "A + B + (~A & ~B)"
+    test = "x + y + (~x & y)"
     rep = "(A & B) - 1"
 
     # print match(test, patt_string)

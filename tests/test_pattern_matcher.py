@@ -11,7 +11,7 @@ import ast
 import unittest
 
 from sspam import pattern_matcher, pre_processing
-from sspam.tools import asttools, leveling
+from sspam.tools import asttools
 
 
 class TestPatternMatcher(unittest.TestCase):
@@ -170,10 +170,10 @@ class TestPatternMatcher(unittest.TestCase):
         # for code coverage
         test_neg = ast.parse("x ^ 2*y ^ 2*z")
         test_neg = pre_processing.all_preprocessings(ast.parse(test_neg))
-        test_neg = leveling.LevelOperators().visit(test_neg)
+        test_neg = asttools.LevelOperators().visit(test_neg)
         patt_ast = ast.parse(pattern_string)
         patt_ast = pre_processing.all_preprocessings(patt_ast)
-        patt_ast = leveling.LevelOperators(ast.Add).visit(patt_ast)
+        patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
         pat = pattern_matcher.PatternMatcher(test_neg, patt_ast)
         self.assertFalse(pat.visit(test_neg, patt_ast))
 
@@ -257,12 +257,12 @@ class TestPatternReplacement(unittest.TestCase):
         # only ADD nodes are leveled right now, this is for code
         # coverage
         test_neg = ast.parse("3*z ^ x ^ 2*y")
-        test_neg = leveling.LevelOperators().visit(test_neg)
+        test_neg = asttools.LevelOperators().visit(test_neg)
         patt_ast = ast.parse("A + 3*z")
-        patt_ast = leveling.LevelOperators().visit(patt_ast)
+        patt_ast = asttools.LevelOperators().visit(patt_ast)
         rep_ast = ast.parse(rep_string)
         ref_ast = ast.parse("3*z ^ x ^ 2*y")
-        ref_ast = leveling.LevelOperators().visit(ref_ast)
+        ref_ast = asttools.LevelOperators().visit(ref_ast)
         rep = pattern_matcher.PatternReplacement(patt_ast, test_neg, rep_ast)
         output_ast = rep.visit(test_neg)
         self.assertTrue(asttools.Comparator().visit(output_ast, ref_ast))

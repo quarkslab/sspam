@@ -1,6 +1,4 @@
 import ast
-import copy
-import operator
 
 import leveling
 
@@ -24,8 +22,9 @@ def apply_hooks():
     backup_operator_hash = ast.operator.__hash__
 
     # used for ast set comparison
-    ast.expr.__hash__ = lambda self: hash(tuple(map(hash, flatten([getattr(self, field)
-                                                                   for field in self._fields]))))
+    list_fields = lambda self: flatten([getattr(self, field)
+                                        for field in self._fields])
+    ast.expr.__hash__ = lambda self: hash(tuple(map(hash, list_fields(self))))
     ast.expr.__eq__ = lambda self, other: Comparator().visit(self, other)
     ast.expr_context.__hash__ = lambda self: hash(type(self))
     ast.operator.__hash__ = lambda self: hash(type(self))
@@ -84,9 +83,9 @@ class GetSize(ast.NodeVisitor):
                 self.result = 8
             elif bitlen > 8 and bitlen < 17:
                 self.result = 16
-            elif bitlen > 16  and bitlen < 33:
+            elif bitlen > 16 and bitlen < 33:
                 self.result = 32
-            elif bitlen > 32  and bitlen < 65:
+            elif bitlen > 32 and bitlen < 65:
                 self.result = 64
             else:
                 raise Exception("Nbits not supported")
@@ -179,14 +178,16 @@ class ConstFolding(ast.NodeTransformer):
     def visit_BoolOp(self, node):
         'A custom BoolOp can be used in leveled AST'
         if type(node.op) not in (ast.Add, ast.Mult,
-                                 ast.BitXor,ast.BitAnd, ast.BitOr):
+                                 ast.BitXor, ast.BitAnd, ast.BitOr):
             return self.generic_visit(node)
         # get constant parts of node:
-        list_cste = [child for child in node.values if isinstance(child, ast.Num)]
+        list_cste = [child for child in node.values
+                     if isinstance(child, ast.Num)]
         if len(list_cste) < 2:
             return self.generic_visit(node)
         rest_values = [n for n in node.values if n not in list_cste]
-        fake_node = ast.Expression(leveling.Unleveling().visit(ast.BoolOp(node.op, list_cste)))
+        fake_node = leveling.Unleveling().visit(ast.BoolOp(node.op, list_cste))
+        fake_node = ast.Expression(fake_node)
         ast.fix_missing_locations(fake_node)
         code = compile(fake_node, '<constant folding>', 'eval')
         obj_env = globals().copy()
@@ -340,7 +341,8 @@ class Comparator(object):
         'Check func id and arguments'
         if node1.func.id != node2.func.id:
             return False
-        return all(self.visit(arg1, arg2) for arg1, arg2 in zip(node1.args, node2.args))
+        return all(self.visit(arg1, arg2)
+                   for arg1, arg2 in zip(node1.args, node2.args))
 
     def visit_BinOp(self, node1, node2):
         'Check type of operation and operands'
@@ -400,3 +402,75 @@ class Comparator(object):
     def visit_Num(self, node1, node2):
         'Check num value'
         return node1.n == node2.n
+
+
+class LevelOperators(ast.NodeTransformer):
+    """
+    Walk through the ast and level successions of associative
+    operators (+, x, &, |, ^) and transform binary nodes in n-ary
+    nodes.
+    """
+
+    def __init__(self, onlyop=None):
+        'Init current operation and storage for leveled nodes and operands'
+        self.current_leveling = ast.BinOp(None, None, None)
+        self.leveled_op = {}
+        self.onlyop = onlyop
+
+    def visit_BinOp(self, node):
+        'Transforms BinOp into leveled BoolOp if possible'
+
+        self.leveled_op.setdefault(node, [])
+        if self.onlyop and type(node.op) != self.onlyop:
+            self.current_leveling = ast.BinOp(None, None, None)
+            return self.generic_visit(node)
+        if type(node.op) != type(self.current_leveling.op):
+            if isinstance(node.op, (ast.Add, ast.Mult, ast.BitAnd,
+                                    ast.BitOr, ast.BitXor)):
+                cond1 = (isinstance(node.left, ast.BinOp)
+                         and type(node.left.op) == type(node.op))
+                cond2 = (isinstance(node.right, ast.BinOp)
+                         and type(node.right.op) == type(node.op))
+                if cond1 or cond2:
+                    self.current_leveling = node
+                    self.generic_visit(node)
+                    if ((not isinstance(node.right, ast.BinOp)
+                         or type(node.right.op) != type(node.op))):
+                        self.leveled_op[node].append(node.right)
+                    if ((not isinstance(node.left, ast.BinOp)
+                         or type(node.left.op) != type(node.op))):
+                        self.leveled_op[node].append(node.left)
+                else:
+                    self.generic_visit(node)
+
+        else:
+            current_leveling = self.current_leveling
+            self.generic_visit(node)
+            self.current_leveling = current_leveling
+            for child in (node.left, node.right):
+                cond = (isinstance(child, ast.BinOp)
+                        and type(child.op) == type(node.op))
+                if not cond:
+                    self.leveled_op[self.current_leveling].append(child)
+
+        if self.leveled_op.get(node, None) and len(self.leveled_op[node]) > 1:
+            return ast.BoolOp(node.op, self.leveled_op[node])
+        return node
+
+
+class Unleveling(ast.NodeTransformer):
+    """
+    Change leveled BoolOps back to regular BinOps.
+    """
+
+    def visit_BoolOp(self, node):
+        'Build a serie of BinOp from BoolOp Children'
+
+        self.generic_visit(node)
+        rchildren = node.values[::-1]
+        prev = ast.BinOp(rchildren[1], node.op, rchildren[0])
+
+        for child in rchildren[2::]:
+            prev = ast.BinOp(child, node.op, prev)
+
+        return prev
