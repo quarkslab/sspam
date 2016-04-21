@@ -1,0 +1,5 @@
+[flake8]
+# disabled because of "false positives":
+# F401: sympy is needed in arithmetic_simpl
+# E226: 2**n is better than 2 ** n
+ignore=F401,E226

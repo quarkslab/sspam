@@ -42,30 +42,31 @@ class TestCSE(unittest.TestCase):
         tests = [("(a + b) + ((a + b)*2 + 3) + (a + b)*2",
                   "cse0Add0 = (a + b)\ncse0Mult0 = (cse0Add0 * 2)\n" +
                   "result = ((cse0Add0 + cse0Mult0) + (3 + cse0Mult0))"),
-                ("(92 | x) + (12 + (x | 92))*3 + ((x | 92) + 12)",
-                 "cse0BitOr0 = (x | 92)\ncse1Add0 = (12 + cse0BitOr0)\n" +
-                 "result = (cse1Add0 + ((cse1Add0 * 3) + cse0BitOr0))"),
-                ("(((((((a + b) * 2) + (c + d)) + (a + b)) + (c + d))" +
-                 "+ (((a + b) & 45) + ((((a + b) * 2) + (c + d)) + " +
-                 "(a + b)))) + ((((a + b) & 45) + ((((a + b) * 2) + " +
-                 "(c + d)) + (a + b))) * 2))",
-                 "cse8Add0 = (a + b)\ncse6Add1 = (c + d)\n" +
-                 "cse5Add2 = (cse6Add1 + (cse8Add0 * 2))\n" +
-                 "cse7Add4 = ((cse5Add2 + cse8Add0) + (cse8Add0 & 45))\n" +
-                 "result = (cse8Add0 + (((cse7Add4 + cse6Add1) + cse5Add2) + (cse7Add4 * 2)))"),
-                ("((((((x) & 255) + 55)) + ((x) & 255)*13)*2) +" +
-                 "(((((x) & 255) + 55)) + ((x) & 255)*13)",
-                 "cse0BitAnd0 = (x & 255)\n" +
-                 "cse1Add1 = ((cse0BitAnd0 + 55) + (cse0BitAnd0 * 13))\n" +
-                 "result = (cse1Add1 + (cse1Add1 * 2))"),
-                 ]
+                 ("(92 | x) + (12 + (x | 92))*3 + ((x | 92) + 12)",
+                  "cse0BitOr0 = (x | 92)\ncse1Add0 = (12 + cse0BitOr0)\n" +
+                  "result = (cse1Add0 + ((cse1Add0 * 3) + cse0BitOr0))"),
+                 ("(((((((a + b) * 2) + (c + d)) + (a + b)) + (c + d))" +
+                  "+ (((a + b) & 45) + ((((a + b) * 2) + (c + d)) + " +
+                  "(a + b)))) + ((((a + b) & 45) + ((((a + b) * 2) + " +
+                  "(c + d)) + (a + b))) * 2))",
+                  "cse8Add0 = (a + b)\ncse6Add1 = (c + d)\n" +
+                  "cse5Add2 = (cse6Add1 + (cse8Add0 * 2))\n" +
+                  "cse7Add4 = ((cse5Add2 + cse8Add0) + (cse8Add0 & 45))\n" +
+                  "result = (cse8Add0 + (((cse7Add4 + cse6Add1) + cse5Add2)" +
+                  " + (cse7Add4 * 2)))"),
+                 ("((((((x) & 255) + 55)) + ((x) & 255)*13)*2) +" +
+                  "(((((x) & 255) + 55)) + ((x) & 255)*13)",
+                  "cse0BitAnd0 = (x & 255)\n" +
+                  "cse1Add1 = ((cse0BitAnd0 + 55) + (cse0BitAnd0 * 13))\n" +
+                  "result = (cse1Add1 + (cse1Add1 * 2))")]
         for orig, ref in tests:
             self.generic_basicCSE(orig, ref)
 
     def test_Xor36(self):
         'Test that CSE of the xor36 function is equivalent to original'
-        input_file = open(os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                       'xor36_flat.py'), 'r')
+        #pylint: disable=exec-used
+        pwd = os.path.dirname(os.path.realpath(__file__))
+        input_file = open(os.path.join(pwd, 'xor36_flat'), 'r')
         input_string = input_file.read()
         input_ast = ast.parse(input_string)
         coderef = compile(ast.Expression(input_ast.body[0].value),
@@ -89,7 +90,6 @@ class TestCSE(unittest.TestCase):
         sol = z3.Solver()
         sol.add(eval(coderef) != eval(result_code))
         self.assertEqual(sol.check().r, -1)
-
 
 
 if __name__ == '__main__':

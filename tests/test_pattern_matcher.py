@@ -28,14 +28,14 @@ class TestPatternMatcher(unittest.TestCase):
             self.assertTrue(pat.visit(input_ast, pattern_ast))
         self.assertTrue(pattern_matcher.match(input_string, patt_string))
 
-    def generic_test_negative(self, input_string, pattern_string, preproc=False):
+    def generic_test_negative(self, input_string, patt_string, preproc=False):
         'Generic test for negative matching'
         input_ast = ast.parse(input_string)
-        pattern_ast = ast.parse(pattern_string)
+        pattern_ast = ast.parse(patt_string)
         pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
         if not preproc:
             self.assertFalse(pat.visit(input_ast, pattern_ast))
-        self.assertFalse(pattern_matcher.match(input_string, pattern_string))
+        self.assertFalse(pattern_matcher.match(input_string, patt_string))
 
     def test_reduced(self):
         'Small tests for basic pattern matching'
@@ -73,7 +73,7 @@ class TestPatternMatcher(unittest.TestCase):
 
     def test_mod(self):
         'Tests where modulo on constants is useful'
-        test_pos = [("(x | 54) + 255*(x & 54)",  "(A | B) - (A & B)"),
+        test_pos = [("(x | 54) + 255*(x & 54)", "(A | B) - (A & B)"),
                     ("254*x + 255", "-2*A - 1")]
         for input_string, patt_string in test_pos:
             self.generic_test_positive(input_string, patt_string, True)
@@ -87,7 +87,7 @@ class TestPatternMatcher(unittest.TestCase):
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string, True)
         pattern_string = "A + B - 2*(A & B)"
-        test_pos = ["x + 108 - 2*(x & 108)"]  #"-2*(x & 108) + x + 108",
+        test_pos = ["x + 108 - 2*(x & 108)"]  # "-2*(x & 108) + x + 108",
                     # "(x & 108)*(-2) + x + 108"]
                     # those test work when the commented part of
                     # subtomult is activated

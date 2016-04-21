@@ -11,7 +11,7 @@ Classes included in this module are:
 
 import ast
 
-from tools import asttools
+from sspam.tools import asttools
 
 
 class ShiftToMult(ast.NodeTransformer):
@@ -75,13 +75,7 @@ class RemoveUselessAnd(ast.NodeTransformer):
 
     def __init__(self, expr_ast, nbits):
         if not nbits:
-            getsize = asttools.GetSize()
-            getsize.visit(expr_ast)
-            if getsize.result:
-                nbits = getsize.result
-            else:
-                # default bitsize is 8
-                nbits = 8
+            nbits = asttools.get_default_nbits(expr_ast)
         self.nbits = nbits
 
     def visit_BinOp(self, node):

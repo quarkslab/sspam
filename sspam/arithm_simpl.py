@@ -2,12 +2,12 @@
 
 This module simplifies symbolic expressions using only arithmetic operators.
 """
-
+#pylint: disable=unused-import,exec-used
 import ast
 import sympy
 import copy
 
-from tools import asttools
+from sspam.tools import asttools
 
 
 def main(expr_ast, nbits):
@@ -40,8 +40,8 @@ def main(expr_ast, nbits):
     eval_expr = eval(code)
     try:
         expr_ast = ast.parse(str(eval_expr))
-    except Exception as e:
-        print e
+    except SyntaxError as ex:
+        print ex
         exit(1)
 
     expr_ast = asttools.ReplaceBitwiseFunctions().visit(expr_ast)

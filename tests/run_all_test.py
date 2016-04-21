@@ -1,5 +1,9 @@
 #!/usr/bin/python
+"""
+Script to run all tests of tests/ directory
+"""
 
+#pylint: disable=invalid-name
 import unittest
 
 testmodules = [
@@ -8,8 +12,7 @@ testmodules = [
     'test_cse',
     'test_pattern_matcher',
     'test_pre_processing',
-    'test_simplifier',
-    ]
+    'test_simplifier']
 
 suite = unittest.TestSuite()
 

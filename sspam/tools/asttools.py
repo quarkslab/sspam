@@ -1,12 +1,12 @@
+"""Various function used to analyze and manipulate ast."""
+
 import ast
 
-import leveling
 
-
-def flatten(l):
+def flatten(lis):
     'Flatten a list'
     res = []
-    for elem in l:
+    for elem in lis:
         if isinstance(elem, list):
             res.extend(flatten(elem))
         else:
@@ -15,6 +15,8 @@ def flatten(l):
 
 
 def apply_hooks():
+    'Apply hooks to change hash and eq functions for ast elements'
+    #pylint: disable=protected-access,unnecessary-lambda
     # backup !
     backup_expr_hash = ast.expr.__hash__
     backup_expr_eq = ast.expr.__eq__
@@ -35,10 +37,23 @@ def apply_hooks():
 
 
 def restore_hooks(hooks):
+    'Restore classic hash and eq function for ast elements'
     ast.expr.__hash__ = hooks[0]
     ast.expr.__eq__ = hooks[1]
     ast.expr_context.__hash__ = hooks[2]
     ast.operator.__hash__ = hooks[3]
+
+
+def get_default_nbits(expr_ast):
+    'Computes default number of bits with size of constants'
+    getsize = GetSize()
+    getsize.visit(expr_ast)
+    if getsize.result:
+        nbits = getsize.result
+    else:
+        # default bitsize is 8
+        nbits = 8
+    return nbits
 
 
 class GetVariables(ast.NodeVisitor):
@@ -51,6 +66,7 @@ class GetVariables(ast.NodeVisitor):
         self.result = set()
 
     def reset(self):
+        'Empty result set, so that instance may be re-used'
         self.result = set()
 
     def visit_Name(self, node):
@@ -68,6 +84,7 @@ class GetSize(ast.NodeVisitor):
         self.result = 0
 
     def reset(self):
+        'Empty result set, so that instance may be re-used'
         self.result = 0
 
     def visit_Num(self, node):
@@ -104,6 +121,7 @@ class GetConstExpr(ast.NodeVisitor):
         self.result = set()
 
     def reset(self):
+        'Empty result set, so that instance may be re-used'
         self.result = set()
 
     def add(self, node):
@@ -130,6 +148,8 @@ class CheckConstExpr(ast.NodeVisitor):
     """
 
     def visit_Num(self, node):
+        'Num is always a constant'
+        #pylint: disable=unused-argument, no-self-use
         return True
 
     def visit_BinOp(self, node):
@@ -150,6 +170,7 @@ class ConstFolding(ast.NodeTransformer):
     Applies constant folding on an ast.
     Also stolen from pythran.
     """
+    #pylint: disable=exec-used
 
     def __init__(self, node, mod):
         'Gather constant expressions'
@@ -186,7 +207,7 @@ class ConstFolding(ast.NodeTransformer):
         if len(list_cste) < 2:
             return self.generic_visit(node)
         rest_values = [n for n in node.values if n not in list_cste]
-        fake_node = leveling.Unleveling().visit(ast.BoolOp(node.op, list_cste))
+        fake_node = Unleveling().visit(ast.BoolOp(node.op, list_cste))
         fake_node = ast.Expression(fake_node)
         ast.fix_missing_locations(fake_node)
         code = compile(fake_node, '<constant folding>', 'eval')
@@ -223,6 +244,7 @@ class ReplaceBitwiseOp(ast.NodeTransformer):
     """
 
     def visit_BinOp(self, node):
+        'Replace bitwise operation with function call'
         self.generic_visit(node)
         if isinstance(node.op, ast.BitAnd):
             return ast.Call(ast.Name('mand', ast.Load()),
@@ -242,6 +264,7 @@ class ReplaceBitwiseOp(ast.NodeTransformer):
         return node
 
     def visit_UnaryOp(self, node):
+        'Replace bitwise unaryop with function call'
         self.generic_visit(node)
         if isinstance(node.op, ast.Invert):
             return ast.Call(ast.Name('mnot', ast.Load()),
@@ -255,6 +278,7 @@ class ReplaceBitwiseFunctions(ast.NodeTransformer):
     """
 
     def visit_Call(self, node):
+        'Replace custom function with bitwise operators'
         self.generic_visit(node)
         if isinstance(node.func, ast.Name):
             if len(node.args) == 2:
@@ -292,6 +316,7 @@ class GetConstMod(ast.NodeTransformer):
         self.nbits = nbits
 
     def visit_Num(self, node):
+        'Replace constant value with value mod 2^n'
         node.n = node.n % 2**self.nbits
         return self.generic_visit(node)
 
@@ -300,6 +325,7 @@ class Comparator(object):
     """
     Compare two ast to check if they're equivalent
     """
+    #pylint: disable=no-self-use
 
     def __init__(self, commut=True):
         'Specify if comparator is commutative or not'
@@ -316,7 +342,6 @@ class Comparator(object):
 
         if not comp:
             raise Exception("no comparison function for %s" % nodetype)
-            return False
 
         return comp(node1, node2)
 
@@ -392,12 +417,13 @@ class Comparator(object):
         return self.visit(node1.operand, node2.operand)
 
     def visit_Assign(self, node1, node2):
+        'Compare targets and values'
         return (self.visit(node1.targets[0], node2.targets[0])
                 and self.visit(node1.value, node2.value))
 
     def visit_Name(self, node1, node2):
         'Check id'
-        return (node1.id == node2.id and type(node1.ctx) == type(node2.ctx))
+        return node1.id == node2.id and type(node1.ctx) == type(node2.ctx)
 
     def visit_Num(self, node1, node2):
         'Check num value'

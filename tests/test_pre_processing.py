@@ -3,12 +3,12 @@
 - TestShiftMult
 - TestSubToMult
 """
+#pylint: disable=relative-import
 
 import ast
 import unittest
 
 from sspam import pre_processing
-from sspam.tools import asttools
 import templates
 
 

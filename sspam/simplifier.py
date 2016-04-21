@@ -11,13 +11,13 @@ from copy import deepcopy
 import os.path
 
 from sspam.tools import asttools
-import pattern_matcher
-import pre_processing
-import arithm_simpl
+from sspam import pattern_matcher
+from sspam import pre_processing
+from sspam import arithm_simpl
 
 
 # list of known patterns and their replacements
-default_rules = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
+DEFAULT_RULES = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
                  ("(A | B) - (A & ~B)", "B"),
                  ("- (A ^ ~B) - 2*(A | B)", "-A - B + 1"),
                  ("A + B + 1 + (~A | ~B)", "(A | B)"),
@@ -43,7 +43,7 @@ default_rules = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
                  ("2*(A ^ 127)", "2*(~A)")]
 
 
-debug = False
+DEBUG = False
 
 
 class Simplifier(ast.NodeTransformer):
@@ -56,8 +56,9 @@ class Simplifier(ast.NodeTransformer):
     - updating variable value for further replacement
     """
 
-    def __init__(self, nbits, rules_list=default_rules):
+    def __init__(self, nbits, rules_list=DEFAULT_RULES):
         'Init context : correspondance between variables and values'
+        #pylint: disable=dangerous-default-value
         self.context = {}
         self.nbits = nbits
 
@@ -71,7 +72,7 @@ class Simplifier(ast.NodeTransformer):
 
     def simplify(self, expr_ast, nbits):
         'Apply pattern matching and arithmetic simplification'
-        if debug:
+        if DEBUG:
             print "before: "
             print unparse(expr_ast)
             print ""
@@ -81,7 +82,7 @@ class Simplifier(ast.NodeTransformer):
         for pattern, repl in self.patterns:
             rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)
             new_ast = rep.visit(deepcopy(expr_ast))
-            if debug:
+            if DEBUG:
                 if not asttools.Comparator().visit(new_ast, expr_ast):
                     print "replaced! "
                     expr_debug = deepcopy(expr_ast)
@@ -104,13 +105,13 @@ class Simplifier(ast.NodeTransformer):
         expr_ast = asttools.ConstFolding(expr_ast,
                                          2**self.nbits).visit(expr_ast)
         expr_ast = asttools.Unleveling().visit(expr_ast)
-        if debug:
+        if DEBUG:
             print "after PM: "
             print unparse(expr_ast)
             print ""
         expr_ast = arithm_simpl.main(expr_ast, nbits)
         expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
-        if debug:
+        if DEBUG:
             print "arithm simpl: "
             print unparse(expr_ast)
             print ""
@@ -134,6 +135,7 @@ class Simplifier(ast.NodeTransformer):
         return node
 
     def visit_Expr(self, node):
+        'Simplify expression and replace it'
         old_value = deepcopy(node.value)
         node.value = self.simplify(node.value, self.nbits)
         # simplify until fixpoint is reached
@@ -163,24 +165,19 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
 
     nbits = nbits
     if not nbits:
-        getsize = asttools.GetSize()
-        getsize.visit(expr_ast)
-        if getsize.result:
-            nbits = getsize.result
-        else:
-            # default bitsize is 8
-            nbits = 8
+        nbits = asttools.get_default_nbits(expr_ast)
 
     if not use_default:
         rules_list = custom_rules
     elif not custom_rules:
-        rules_list = default_rules
+        rules_list = DEFAULT_RULES
     else:
-        rules_list = default_rules + custom_rules
+        rules_list = DEFAULT_RULES + custom_rules
     expr_ast = Simplifier(nbits, rules_list).visit(expr_ast)
     return unparse(expr_ast).strip('\n')
 
 
+#pylint: disable=invalid-name
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("expr", type=str, help="expression to simplify")

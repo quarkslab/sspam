@@ -26,8 +26,8 @@ try:
 except ImportError:
     raise Exception("z3 module is needed to use this pattern matcher")
 
-from tools import asttools
-import pre_processing
+from sspam.tools import asttools
+from sspam import pre_processing
 
 
 class EvalPattern(ast.NodeTransformer):
@@ -96,6 +96,8 @@ class PatternMatcher(asttools.Comparator):
         getwild.visit(pattern_ast)
         self.list_wildcards = [c for c in getwild.result if c.isupper()]
 
+    #pylint: disable=exec-used,too-many-return-statements,too-many-branches
+    # the last two disabled should be corrected eventually
     def check_eq_z3(self, node1, node2):
         'Check equivalence with z3'
 
@@ -164,9 +166,9 @@ class PatternMatcher(asttools.Comparator):
         sol = z3.Solver()
         sol.add(target.n == eval(code2))
         if sol.check().r == 1:
-            m = sol.model()
-            for inst in m.decls():
-                self.wildcards[str(inst)] = ast.Num(int(m[inst].as_long()))
+            model = sol.model()
+            for inst in model.decls():
+                self.wildcards[str(inst)] = ast.Num(int(model[inst].as_long()))
             return True
         return False
 
@@ -260,8 +262,8 @@ class PatternMatcher(asttools.Comparator):
             getwild = asttools.GetVariables()
             getwild.visit(operand)
             wilds = getwild.result
-            for w in wilds:
-                if w not in self.wildcards:
+            for wil in wilds:
+                if wil not in self.wildcards:
                     return False
 
             return self.check_eq_z3(target, pattern)
@@ -286,8 +288,7 @@ class PatternMatcher(asttools.Comparator):
 
         if not comp:
             raise Exception("no comparison function for %s" % nodetype)
-        c = comp(target, pattern)
-        return c
+        return comp(target, pattern)
 
     def visit_Num(self, target, pattern):
         'Check if num values are equal modulo 2**nbits'
@@ -488,13 +489,15 @@ def replace(target_str, pattern_str, replacement_str):
     return rep.visit(target_ast)
 
 
+# Used for debug purposes:
+#pylint: disable=invalid-name
 if __name__ == '__main__':
     patt_string = "A + B + (~A & ~B)"
     test = "x + y + (~x & y)"
-    rep = "(A & B) - 1"
+    repl = "(A & B) - 1"
 
-    # print match(test, patt_string)
-    # print "-"*80
-    res = replace(test, patt_string, rep)
-    print ast.dump(res)
-    print astunparse.unparse(res)
+    print match(test, patt_string)
+    print "-"*80
+    out = replace(test, patt_string, repl)
+    print ast.dump(out)
+    print astunparse.unparse(out)

@@ -6,12 +6,14 @@
 - TestConstFolding
 - TestGetConstMod
 """
+#pylint: disable=relative-import
 
 import ast
 import unittest
 
 from sspam.tools import asttools
 import templates
+
 
 class TestGetVariables(templates.AstVisitorCase):
     """
@@ -42,7 +44,6 @@ class TestGetSize(templates.AstVisitorCase):
                    ("x*(-0x1325)", 16),
                    ("0xFFFFFFFE*x", 32), ("(0x123456789876543 | x) + 12", 64)]
         self.generic_AstVisitorTest(corresp, asttools.GetSize())
-
 
 
 class TestGetConstExpr(templates.AstVisitorCase):
