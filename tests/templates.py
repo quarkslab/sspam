@@ -4,6 +4,7 @@
 import ast
 import unittest
 
+from sspam import pattern_matcher, simplifier
 from sspam.tools import asttools
 
 
@@ -57,3 +58,40 @@ class AstVisitorCase(unittest.TestCase):
             out = visitor.result
             self.assertEquals(out, results)
             visitor.reset()
+
+
+class PatternMatcherTest(unittest.TestCase):
+    """
+    Generic class for tests on pattern matcher (short and long)
+    """
+
+    def generic_test_positive(self, input_string, patt_string, preproc=False):
+        'Generic test for positive matching'
+        input_ast = ast.parse(input_string)
+        pattern_ast = ast.parse(patt_string)
+        pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
+        if not preproc:
+            self.assertTrue(pat.visit(input_ast, pattern_ast))
+        self.assertTrue(pattern_matcher.match(input_string, patt_string))
+
+    def generic_test_negative(self, input_string, patt_string, preproc=False):
+        'Generic test for negative matching'
+        input_ast = ast.parse(input_string)
+        pattern_ast = ast.parse(patt_string)
+        pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
+        if not preproc:
+            self.assertFalse(pat.visit(input_ast, pattern_ast))
+        self.assertFalse(pattern_matcher.match(input_string, patt_string))
+
+
+class SimplifierTest(unittest.TestCase):
+    """
+    Generic class for tests on simplifier (short and long)
+    """
+
+    def generic_test(self, expr, refstring, nbits=0):
+        'Generic test for simplifier script'
+        output_string = simplifier.simplify(expr, nbits)
+        output = ast.parse(output_string)
+        ref = ast.parse(refstring)
+        self.assertTrue(asttools.Comparator().visit(output, ref))

@@ -6,10 +6,10 @@ import unittest
 import os
 
 from sspam import simplifier
-from test_simplifier import TestSimplifier
+from templates import SimplifierTest
 
 
-class TestSimplifierLong(TestSimplifier):
+class TestSimplifierLong(SimplifierTest):
     """
     Longer tests for simplifier module.
     """

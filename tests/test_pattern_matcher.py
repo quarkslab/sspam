@@ -6,36 +6,20 @@ Tested features are:
   - pure pattern matcher with various situations
   - pattern replacement
 """
+#pylint: disable=relative-import
 
 import ast
 import unittest
 
 from sspam import pattern_matcher, pre_processing
 from sspam.tools import asttools
+from templates import PatternMatcherTest
 
 
-class TestPatternMatcher(unittest.TestCase):
+class TestPatternMatcher(PatternMatcherTest):
     """
     Test for false positive / negative matchings.
     """
-
-    def generic_test_positive(self, input_string, patt_string, preproc=False):
-        'Generic test for positive matching'
-        input_ast = ast.parse(input_string)
-        pattern_ast = ast.parse(patt_string)
-        pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
-        if not preproc:
-            self.assertTrue(pat.visit(input_ast, pattern_ast))
-        self.assertTrue(pattern_matcher.match(input_string, patt_string))
-
-    def generic_test_negative(self, input_string, patt_string, preproc=False):
-        'Generic test for negative matching'
-        input_ast = ast.parse(input_string)
-        pattern_ast = ast.parse(patt_string)
-        pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
-        if not preproc:
-            self.assertFalse(pat.visit(input_ast, pattern_ast))
-        self.assertFalse(pattern_matcher.match(input_string, patt_string))
 
     def test_reduced(self):
         'Small tests for basic pattern matching'

@@ -4,10 +4,10 @@
 
 import unittest
 
-from test_pattern_matcher import TestPatternMatcher
+from templates import PatternMatcherTest
 
 
-class TestPatternMatcherLong(TestPatternMatcher):
+class TestPatternMatcherLong(PatternMatcherTest):
     """
     More thorough tests on pattern matcher.
     """

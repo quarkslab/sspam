@@ -1,25 +1,17 @@
 """Tests for simplifier module.
 """
+#pylint: disable=relative-import
 
-import ast
 import os
 import unittest
 
-from sspam import simplifier
-from sspam.tools import asttools
+from templates import SimplifierTest
 
 
-class TestSimplifier(unittest.TestCase):
+class TestSimplifier(SimplifierTest):
     """
     Tests for Simplifier script.
     """
-
-    def generic_test(self, expr, refstring, nbits=0):
-        'Generic test for simplifier script'
-        output_string = simplifier.simplify(expr, nbits)
-        output = ast.parse(output_string)
-        ref = ast.parse(refstring)
-        self.assertTrue(asttools.Comparator().visit(output, ref))
 
     def test_input_file(self):
         'Test with file as an input'
