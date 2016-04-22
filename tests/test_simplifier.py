@@ -32,14 +32,7 @@ class TestSimplifier(unittest.TestCase):
 
     def test_basics(self):
         'Some basics tests'
-        tests = [("45 + x + 32", "(77 + x)"), ("x + x + x", "(3 * x)"),
-                 ("""
-a = 3 + x + 0
-b = 4 + x - x + x
-c = - 7 + a + b""",
-                  """a = (3 + x)
-b = (4 + x)
-c = (2 * x)""")]
+        tests = [("45 + x + 32", "(77 + x)"), ("x + x + x", "(3 * x)")]
         for input_args, refstring in tests:
             self.generic_test(input_args, refstring)
 
@@ -53,21 +46,16 @@ c = (2 * x)""")]
                   "(3393925841 + (638264265 * y))"),
                  ("(2937410391*x | 3393925841) + 638264265*y" +
                   "- ((2937410391 * x) & 901041454)",
-                  "(3393925841 + (638264265 * y))")]
+                  "(3393925841 + (638264265 * y))"),
+                 ("(4211719010 ^ 2937410391 * x) + 2 * (2937410391 * x" +
+                  " | 83248285) + 4064867995",
+                  "((2937410391 * x) + 4148116279)"),
+                 ("(2937410391*x | 3393925841) - ((2937410391 * x)" +
+                  " & 901041454) + 638264265*y",
+                  "((638264265 * y) + 3393925841)")]
 
         for input_args, refstring in tests:
             self.generic_test(input_args, refstring)
-
-    def test_samples(self):
-        'Tests on real samples'
-        samples_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                   "samples")
-        for samplefilename in os.listdir(samples_dir):
-            fname = os.path.join(samples_dir, samplefilename)
-            samplefile = open(fname, 'r')
-            refstring = samplefile.readline()[2:-1]
-            output_string = simplifier.simplify(fname).split('\n')[-1]
-            self.assertTrue(refstring == output_string)
 
 
 if __name__ == '__main__':

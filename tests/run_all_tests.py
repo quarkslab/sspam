@@ -7,17 +7,22 @@ Script to run all tests of tests/ directory
 import unittest
 import sys
 
-testmodules = [
+alltestmodules = [
     'test_arithm_simpl',
     'test_asttools',
     'test_cse',
     'test_pattern_matcher',
-    'test_pre_processing']
+    'test_pre_processing',
+    'test_simplifier',
+    'test_pattern_matcher_long',
+    'test_simplifier_long']
 
 suite = unittest.TestSuite()
 
-if len(sys.argv) > 1 and sys.argv[1] == 'full':
-    testmodules.append("test_simplifier")
+if len(sys.argv) > 1 and sys.argv[1] == 'quick':
+    testmodules = [module for module in alltestmodules if not "long" in module]
+else:
+    testmodules = alltestmodules
 
 for t in testmodules:
     suite.addTest(unittest.defaultTestLoader.loadTestsFromName(t))

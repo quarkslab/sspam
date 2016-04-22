@@ -40,24 +40,16 @@ class TestPatternMatcher(unittest.TestCase):
     def test_reduced(self):
         'Small tests for basic pattern matching'
         pattern_string = "(A ^ ~B) + B"
-        tests_pos = ["(x ^ ~y) + y", "(x ^ ~35) + 35", "(42 ^ ~y) + y",
-                     "((x*a) ^ var) + ~var", "(42 ^ x) + 213",
+        tests_pos = ["(x ^ ~y) + y", "(x ^ ~y) + y", "(x ^ ~35) + 35",
+                     "(42 ^ ~y) + y", "((x*a) ^ var) + ~var",
+                     "(42 ^ x) + 213", "45 + (x ^ 210)",
                      "(42 ^ (a*x + b)) + 213", "((g ^ 23) ^ x) + (g ^ 232)"]
-        for input_string in tests_pos:
-            self.generic_test_positive(input_string, pattern_string)
-        pattern_string = "(A ^ B) + ~B"
-        tests_pos = ["(x ^ y) + ~y", "(x ^ ~y) + y", "(x ^ 45) + 210",
-                     "(210 ^ x) + 45", "45 + (x ^ 210)"]
-        test_pos = ["(x ^ ~y) + y"]
         for input_string in tests_pos:
             self.generic_test_positive(input_string, pattern_string)
         pattern_string = "(A ^ ~B) - B"
         test_pos = ["(x ^ ~y) - y", "(x ^ 45) - 210"]
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string)
-        test_neg = ["(x ^ y) - y", "y - (x ^ ~y)", "(x ^ ~y) - z"]
-        for input_string in test_neg:
-            self.generic_test_negative(input_string, pattern_string)
 
     def test_csts(self):
         'Tests containing constants'
@@ -99,21 +91,10 @@ class TestPatternMatcher(unittest.TestCase):
         pattern_string = "(A ^ ~B) + 2*(A | B)"
 
         tests_pos = ["(x ^ ~y) + 2*(x | y)", "(x | y)*2 + (x ^ ~y)",
-                     "(y | x)*2 + (x ^ ~y)", "(y | x)*2 + (~y ^ x)",
-                     "(x | y)*2 + (~x ^ y)", "(y | x)*2 + (y ^ ~x)",
                      "(x ^ ~45) + (45 | x)*2", "(x ^ 210) + 2*(x | 45)",
-                     "((a + 32) ^ ~(var*5)) + ((a + 32) | (var*5))*2",
-                     "((g ^ 23) | (a*x + b))*2 + ((a*x + b) ^ (g ^ 232))",
-                     "((g + 45) | (12 & n))*2 + ((-g - 46) ^ (12 & n))",
-                     "(g | (12 & n))*2 + ((g ^ (-1)) ^ (12 & n))"]
+                     "((g ^ 23) | (a*x + b))*2 + ((a*x + b) ^ (g ^ 232))"]
         for input_string in tests_pos:
             self.generic_test_positive(input_string, pattern_string)
-
-        tests_neg = ["(x ^ y) + 2*(x | y)", "(~x ^ ~y) + 2*(x | y)",
-                     "(x ^ 42) + 2*(x | 34)", "3*(x | y) + (x ^ ~y)",
-                     "((g + 45) | (12 & n))*2 + ((-g - 47) ^ (12 & n))"]
-        for input_string in tests_neg:
-            self.generic_test_negative(input_string, pattern_string)
 
         # test with pre-processing
         tests_preproc = ["(x ^ ~y) + ((x | y) << 1)"]
@@ -129,11 +110,6 @@ class TestPatternMatcher(unittest.TestCase):
                     "((x + 2) ^ (y*3)) + ((x + 2) & (y*3))*2"]
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string)
-
-        tests_neg = ["(x ^ x) + 2*(x & y)", "(x ^ ~y) + 2*(x & y)",
-                     "(x ^ y) + 3*(x & y)"]
-        for input_string in tests_neg:
-            self.generic_test_negative(input_string, pattern_string)
 
     def test_mba_three(self):
         'Test positive / negative for an anoying MBA'
@@ -269,7 +245,6 @@ class TestPatternReplacement(unittest.TestCase):
 
     def test_real(self):
         'Tests inspired from real events'
-
         pattern = "(A ^ ~B) + 2*(A | B)"
         replacement = "A + B - 1"
         tests = [(("(4211719010 ^ 2937410391*x) +" +

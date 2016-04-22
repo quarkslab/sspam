@@ -100,7 +100,7 @@ class Simplifier(ast.NodeTransformer):
                     print "after:    ", ast.dump(new_ast)
                     print ""
             expr_ast = new_ast
-        # this is ugly, should be "generalized"
+        # bitwise simplification: this is ugly, should be "generalized"
         expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
         expr_ast = asttools.ConstFolding(expr_ast,
                                          2**self.nbits).visit(expr_ast)
