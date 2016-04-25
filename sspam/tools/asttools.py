@@ -26,7 +26,8 @@ def apply_hooks():
     # used for ast set comparison
     list_fields = lambda self: flatten([getattr(self, field)
                                         for field in self._fields])
-    ast.expr.__hash__ = lambda self: hash(tuple(map(hash, list_fields(self))))
+    hashboolop = lambda self: hash(tuple(sorted(map(hash, list_fields(self)))))
+    ast.expr.__hash__ = hashboolop
     ast.expr.__eq__ = lambda self, other: Comparator().visit(self, other)
     ast.expr_context.__hash__ = lambda self: hash(type(self))
     ast.operator.__hash__ = lambda self: hash(type(self))
@@ -482,6 +483,11 @@ class LevelOperators(ast.NodeTransformer):
         if self.leveled_op.get(node, None) and len(self.leveled_op[node]) > 1:
             return ast.BoolOp(node.op, self.leveled_op[node])
         return node
+
+    def visit_UnaryOp(self, node):
+        'UnaryOp are not leveld'
+        self.current_leveling = ast.BinOp(None, None, None)
+        return self.generic_visit(node)
 
 
 class Unleveling(ast.NodeTransformer):
