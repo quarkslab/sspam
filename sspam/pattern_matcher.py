@@ -96,10 +96,9 @@ class PatternMatcher(asttools.Comparator):
         getwild.visit(pattern_ast)
         self.list_wildcards = [c for c in getwild.result if c.isupper()]
 
-    #pylint: disable=exec-used,too-many-return-statements,too-many-branches
-    # the last two disabled should be corrected eventually
     def check_eq_z3(self, node1, node2):
         'Check equivalence with z3'
+        #pylint: disable=exec-used
 
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
@@ -138,6 +137,7 @@ class PatternMatcher(asttools.Comparator):
 
     def get_model(self, target, pattern):
         'When target is constant and wildcards have no value yet'
+        #pylint: disable=exec-used
 
         if target.n == 0:
             # zero is too permissive
@@ -174,6 +174,8 @@ class PatternMatcher(asttools.Comparator):
 
     def check_pattern(self, target, pattern):
         'Try to match pattern written in different ways'
+        #pylint: disable=too-many-return-statements,too-many-branches
+        # should be corrected eventually
 
         if asttools.CheckConstExpr().visit(pattern):
             if isinstance(target, ast.Num):
@@ -265,8 +267,18 @@ class PatternMatcher(asttools.Comparator):
             for wil in wilds:
                 if wil not in self.wildcards:
                     return False
-
             return self.check_eq_z3(target, pattern)
+
+       # this could replace almost all previous code, but increase
+       # time of simplification a lot (~ 3 times)
+#        getwild = asttools.GetVariables()
+#        getwild.visit(pattern)
+#        wilds = list(getwild.result)
+#        if all(wil in self.wildcards for wil in wilds):
+#            eval_pattern = copy.deepcopy(pattern)
+#            eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)
+#            return self.check_eq_z3(target, eval_pattern)
+
         return False
 
     def visit(self, target, pattern):
