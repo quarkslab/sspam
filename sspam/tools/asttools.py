@@ -318,7 +318,7 @@ class GetConstMod(ast.NodeTransformer):
     def visit_Num(self, node):
         'Replace constant value with value mod 2^n'
         node.n = node.n % 2**self.nbits
-        return self.generic_visit(node)
+        return node
 
 
 class Comparator(object):

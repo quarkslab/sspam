@@ -55,5 +55,7 @@ def main(expr_ast, nbits):
         expr_ast = expr_ast.body[0]
     elif original_type in {ast.BinOp, ast.UnaryOp}:
         expr_ast = expr_ast.body[0].value
+    elif original_type == ast.Num:
+        expr_ast = expr_ast.body[0].value
 
     return expr_ast
