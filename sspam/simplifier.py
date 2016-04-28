@@ -177,8 +177,8 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
     return unparse(expr_ast).strip('\n')
 
 
-#pylint: disable=invalid-name
 if __name__ == "__main__":
+    #pylint: disable=invalid-name
     parser = argparse.ArgumentParser()
     parser.add_argument("expr", type=str, help="expression to simplify")
     parser.add_argument("-n", dest="nbits", type=int,
