@@ -79,6 +79,11 @@ class PatternMatcher(asttools.Comparator):
         getvar.visit(self.root)
         self.variables = getvar.result
 
+    @staticmethod
+    def is_wildcard(node):
+        'Check if node is wildcard'
+        return isinstance(node, ast.Name) and node.id.isupper()
+
     def check_eq_z3(self, target, pattern):
         'Check equivalence with z3'
         #pylint: disable=exec-used
@@ -158,6 +163,92 @@ class PatternMatcher(asttools.Comparator):
             return True
         return False
 
+    def check_not(self, target, pattern):
+        'Check NOT pattern node that could be in another form'
+        if self.is_wildcard(pattern.operand):
+            wkey = pattern.operand.id
+            if isinstance(target, ast.Num):
+                if wkey not in self.wildcards:
+                    mod = 2**self.nbits
+                    self.wildcards[wkey] = ast.Num((~target.n) % mod)
+                    return True
+                else:
+                    wilds2 = self.wildcards[pattern.operand.id]
+                    num = ast.Num((~target.n) % 2**self.nbits)
+                    return asttools.Comparator().visit(wilds2, num)
+            else:
+                if wkey not in self.wildcards:
+                    self.wildcards[wkey] = ast.UnaryOp(ast.Invert(),
+                                                       target)
+                    return True
+            return self.check_eq_z3(target, pattern)
+        else:
+            subpattern = pattern.operand
+            newtarget = ast.UnaryOp(ast.Invert(), target)
+            return self.check_eq_z3(newtarget, subpattern)
+
+    def check_neg(self, target, pattern):
+        'Check (-1)*... pattern that could be in another form'
+        if self.is_wildcard(pattern.right):
+            wkey = pattern.right.id
+            if isinstance(target, ast.Num):
+                if wkey not in self.wildcards:
+                    mod = 2**self.nbits
+                    self.wildcards[wkey] = ast.Num((-target.n) % mod)
+                    return True
+                else:
+                    wilds2 = self.wildcards[pattern.right.id]
+                    num = ast.Num((-target.n) % 2**self.nbits)
+                    return asttools.Comparator().visit(wilds2, num)
+            else:
+                if wkey not in self.wildcards:
+                    self.wildcards[wkey] = ast.BinOp(ast.Num(-1),
+                                                     ast.Mult(), target)
+                    return True
+        return self.check_eq_z3(target, pattern)
+
+    def check_twomult(self, target, pattern):
+        'Check 2*... pattern that could be in another form'
+        if isinstance(pattern.left, ast.Num) and pattern.left.n == 2:
+            operand = pattern.right
+        elif isinstance(pattern.right, ast.Num) and pattern.right.n == 2:
+            operand = pattern.left
+        else:
+            return False
+
+        # deal with case where wildcard operand and target are const values
+        if isinstance(target, ast.Num) and isinstance(operand, ast.Name):
+            conds = (operand.id in self.wildcards and
+                     isinstance(self.wildcards[operand.id], ast.Num))
+            if conds:
+                eva = (self.wildcards[operand.id].n)*2 % 2**(self.nbits)
+                if eva == target.n:
+                    return True
+            else:
+                if target.n % 2 == 0:
+                    self.wildcards[operand.id] = ast.Num(target.n / 2)
+                    return True
+                return False
+
+        # get all wildcards in operand and check if they have value
+        getwild = asttools.GetVariables()
+        getwild.visit(operand)
+        wilds = getwild.result
+        for wil in wilds:
+            if wil not in self.wildcards:
+                return False
+        return self.check_eq_z3(target, pattern)
+
+    def general_check(self, target, pattern):
+        'General check, very time-consuming, not used at the moment'
+        getwild = asttools.GetVariables()
+        getwild.visit(pattern)
+        wilds = list(getwild.result)
+        if all(wil in self.wildcards for wil in wilds):
+            eval_pattern = deepcopy(pattern)
+            eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)
+            return self.check_eq_z3(target, eval_pattern)
+
     def check_pattern(self, target, pattern):
         'Try to match pattern written in different ways'
         #pylint: disable=too-many-return-statements,too-many-branches
@@ -177,93 +268,24 @@ class PatternMatcher(asttools.Comparator):
             return self.get_model(target, pattern)
 
         # deal with NOT that could have been evaluated before
-        if isinstance(pattern, ast.UnaryOp):
-            conds = (isinstance(pattern.op, ast.Invert) and
-                     isinstance(pattern.operand, ast.Name) and
-                     pattern.operand.id.isupper())
-            if conds:
-                wkey = pattern.operand.id
-                if isinstance(target, ast.Num):
-                    if wkey not in self.wildcards:
-                        mod = 2**self.nbits
-                        self.wildcards[wkey] = ast.Num((~target.n) % mod)
-                        return True
-                    else:
-                        wilds2 = self.wildcards[pattern.operand.id]
-                        num = ast.Num((~target.n) % 2**self.nbits)
-                        return asttools.Comparator().visit(wilds2, num)
-                else:
-                    if wkey not in self.wildcards:
-                        self.wildcards[wkey] = ast.UnaryOp(ast.Invert(),
-                                                           target)
-                        return True
-            return self.check_eq_z3(target, pattern)
+        notnode = (isinstance(pattern, ast.UnaryOp) and
+                   isinstance(pattern.op, ast.Invert))
+        if notnode:
+            return self.check_not(target, pattern)
 
         # deal with (-1)*B that could have been evaluated
-        condpatt = (isinstance(pattern, ast.BinOp)
-                    and isinstance(pattern.op, ast.Mult)
-                    and isinstance(pattern.left, ast.Num)
-                    and pattern.left.n == -1
-                    and isinstance(pattern.right, ast.Name)
-                    and pattern.right.id.isupper())
-        if condpatt:
-            wkey = pattern.right.id
-            if isinstance(target, ast.Num):
-                if wkey not in self.wildcards:
-                    mod = 2**self.nbits
-                    self.wildcards[wkey] = ast.Num((-target.n) % mod)
-                    return True
-                else:
-                    wilds2 = self.wildcards[pattern.right.id]
-                    num = ast.Num((-target.n) % 2**self.nbits)
-                    return asttools.Comparator().visit(wilds2, num)
-            else:
-                if wkey not in self.wildcards:
-                    self.wildcards[wkey] = ast.BinOp(ast.Num(-1),
-                                                     ast.Mult(), target)
-                    return True
+        negnode = (isinstance(pattern, ast.BinOp)
+                   and isinstance(pattern.op, ast.Mult)
+                   and isinstance(pattern.left, ast.Num)
+                   and pattern.left.n == -1)
+        if negnode:
+            return self.check_neg(target, pattern)
 
-        # deal with 2* something
-        if isinstance(pattern, ast.BinOp) and isinstance(pattern.op, ast.Mult):
-            if isinstance(pattern.left, ast.Num) and pattern.left.n == 2:
-                operand = pattern.right
-            elif isinstance(pattern.right, ast.Num) and pattern.right.n == 2:
-                operand = pattern.left
-            else:
-                return False
-
-            # deal with case where wildcard operand and target are const values
-            if isinstance(target, ast.Num) and isinstance(operand, ast.Name):
-                conds = (operand.id in self.wildcards and
-                         isinstance(self.wildcards[operand.id], ast.Num))
-                if conds:
-                    eva = (self.wildcards[operand.id].n)*2 % 2**(self.nbits)
-                    if eva == target.n:
-                        return True
-                else:
-                    if target.n % 2 == 0:
-                        self.wildcards[operand.id] = ast.Num(target.n / 2)
-                        return True
-                    return False
-
-            # get all wildcards in operand and check if they have value
-            getwild = asttools.GetVariables()
-            getwild.visit(operand)
-            wilds = getwild.result
-            for wil in wilds:
-                if wil not in self.wildcards:
-                    return False
-            return self.check_eq_z3(target, pattern)
-
-       # this could replace almost all previous code, but increase
-       # time of simplification a lot (~ 3 times)
-#        getwild = asttools.GetVariables()
-#        getwild.visit(pattern)
-#        wilds = list(getwild.result)
-#        if all(wil in self.wildcards for wil in wilds):
-#            eval_pattern = deepcopy(pattern)
-#            eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)
-#            return self.check_eq_z3(target, eval_pattern)
+        # deal with 2*B
+        multnode = (isinstance(pattern, ast.BinOp) and
+                    isinstance(pattern.op, ast.Mult))
+        if multnode:
+            return self.check_twomult(target, pattern)
 
         return False
 
@@ -487,9 +509,10 @@ def replace(target_str, pattern_str, replacement_str):
 # Used for debug purposes:
 if __name__ == '__main__':
     #pylint: disable=invalid-name
-    patt_string = "A + B + (~A & ~B)"
-    test = "x + y + (~x & y)"
-    repl = "(A & B) - 1"
+    patt_string = "(A ^ ~B) + 2*(A | B)"
+    test = "((((g + 45) | (12 & n)) * 2) + ((- g - 46) ^ (12 & n)))"
+    test = "((g + 45) | y)*2 + ((-g -46) ^ y)"
+    repl = "A + B"
 
     print match(test, patt_string)
     print "-"*80
