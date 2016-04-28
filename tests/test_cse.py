@@ -19,7 +19,7 @@ class TestCSE(unittest.TestCase):
         output_cse = cse.apply_cse(instring)
         self.assertEquals(refstring, output_cse)
 
-    def test_Basics(self):
+    def test_basics(self):
         'Test matching of AST with simple examples'
         tests = [("2*x + 2*x",
                   "cse0Mult0 = (2 * x)\nresult = (cse0Mult0 + cse0Mult0)"),
@@ -37,7 +37,7 @@ class TestCSE(unittest.TestCase):
         for orig, ref in tests:
             self.generic_basicCSE(orig, ref)
 
-    def test_MultipleCSE(self):
+    def test_multipleCSE(self):
         'Test matching of AST with more complex examples'
         tests = [("(a + b) + ((a + b)*2 + 3) + (a + b)*2",
                   "cse0Add0 = (a + b)\ncse0Mult0 = (cse0Add0 * 2)\n" +
@@ -62,7 +62,7 @@ class TestCSE(unittest.TestCase):
         for orig, ref in tests:
             self.generic_basicCSE(orig, ref)
 
-    def test_Xor36(self):
+    def test_xor36(self):
         'Test that CSE of the xor36 function is equivalent to original'
         #pylint: disable=exec-used
         pwd = os.path.dirname(os.path.realpath(__file__))

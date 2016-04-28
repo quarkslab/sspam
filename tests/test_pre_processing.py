@@ -17,7 +17,7 @@ class TestShiftMult(templates.AstCompCase):
     Test pre-processing that transforms shifts in mults.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for shift -> mult replacement'
         tests = [("x << 1", "x*2"), ("(y*32) << 1", "(y*32)*2"),
                  ("var << 4", "var*16"), ("3 << var", "3 << var"),
@@ -30,7 +30,7 @@ class TestSubToMult(templates.AstCompCase):
     Test pre-processing that transforms subs in mults of -1.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for sub -> -1 mult replacement'
         tests = [("-x", "(-1)*x"), ("x - 3", "x + (-1)*3"),
                  ("- x - y", "(-1)*x + (-1)*y")]
@@ -42,7 +42,7 @@ class RemoveUselessAnd(templates.AstCompCase):
     Test pre-processing removing AND 0xFF...FF
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for removing useless ands'
         tests = [("x & 255", "x", 8), ("x & 255", "x & 255", 32),
                  ("x & 65535", "x", 16), ("x & 255", "x & 255", 16)]

@@ -22,14 +22,14 @@ class TestGetVariables(templates.AstVisitorCase):
     Test ast visitor GetVariables.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for GetVariable'
         corresp = [("x", {"x"}), ("3*(x & 45) + x", {"x"}),
                    ("x + 2*y", {"y", "x"}),
                    ("bla - azerty + 2*(azerty + bla)", {"azerty", "bla"})]
         self.generic_AstVisitorTest(corresp, asttools.GetVariables())
 
-    def test_NoVariable(self):
+    def test_novariable(self):
         'Test when there is no variable'
         self.generic_AstVisitorTest('(3 + 34)*2', set(),
                                     asttools.GetVariables())
@@ -40,7 +40,7 @@ class TestGetSize(templates.AstVisitorCase):
     Test ast visitor GetSize.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for GetSize'
         corresp = [("x", 0), ("x & 3", 2), ("x - 5", 4), ("x + 250", 8),
                    ("x*(-0x1325)", 16),
@@ -82,7 +82,7 @@ class TestConstFolding(unittest.TestCase):
         orig = asttools.ConstFolding(orig, 2**nbits).visit(orig)
         self.assertTrue(asttools.Comparator().visit(orig, ref))
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for ConstFolding'
         corresp = {"45 + 2": ["47", 8], "(3 + 2 + x)": ["(5 + x)", 16],
                    "2*230": ["204", 8], "2 - 4": ["254", 8],
@@ -91,7 +91,7 @@ class TestConstFolding(unittest.TestCase):
         for origstring, [refstring, nbits] in corresp.iteritems():
             self.generic_ConstFolding(origstring, refstring, nbits)
 
-    def test_Leveled_AST(self):
+    def test_leveled_ast(self):
         'Simple tests for ConstFolding on custom BoolOps'
         corresp = {"(x + 3) + 2": ["x + 5", 8],
                    "((x ^ 14) ^ 234) ^ 48": ["x ^ 212", 8],
@@ -105,7 +105,7 @@ class TestReplaceBitWiseOp(templates.AstCompCase):
     Test behaviour of ast transformer ReplaceBitwiseOp.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for ReplaceBitwiseOp'
         corresp = [("x ^ y", "mxor(x, y)"), ("x & y", "mand(x, y)"),
                    ("x | y", "mor(x,y)"), ("(x ^ y) & 45",
@@ -120,7 +120,7 @@ class TestReplaceBitwiseFunctions(templates.AstCompCase):
     Test ast transformer class ReplaceBitwiseFunction.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for ReplaceBitwiseFunctions'
         corresp = [("mand(x, y)", "x & y"), ("mor(x, y)", "x | y"),
                    ("mxor(x ,y)", "x ^ y"), ("mnot(x)", "~x"),
@@ -133,7 +133,7 @@ class TestGetConstMod(templates.AstCompCase):
     Test GetContMod.
     """
 
-    def test_Basics(self):
+    def test_basics(self):
         'Simple tests for GetConstMod'
         corresp = {"34": ["2", 4], "356 + x": ["100 + x", 8],
                    "75901*y + 456": ["10365*y + 456", 16]}
@@ -316,7 +316,7 @@ class TestLeveling(unittest.TestCase):
             test_ast = asttools.LevelOperators(ast.Add).visit(test_ast)
             self.assertTrue(asttools.Comparator().visit(test_ast, ref_ast))
 
-    def test_NoLeveling(self):
+    def test_noleveling(self):
         'Tests where nothing should be leveled'
         corresp = [(["a + b", "b + a"],
                    ast.BinOp(ast.Name('a', ast.Load()),
@@ -333,7 +333,7 @@ class TestLeveling(unittest.TestCase):
         for refstring, result in corresp:
             self.generic_leveling(refstring, result)
 
-    def test_UnLeveling(self):
+    def test_unleveling(self):
         'Tests to see if unleveling is correct'
 
         tests = [("x + (3 + y)", "3 + (y + x)"),
