@@ -134,7 +134,7 @@ class TestPatternMatcher(PatternMatcherTest):
         patt_ast = ast.parse(pattern_string)
         patt_ast = pre_processing.all_preprocessings(patt_ast)
         patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
-        pat = pattern_matcher.PatternMatcher(test_neg, patt_ast)
+        pat = pattern_matcher.PatternMatcher(test_neg)
         self.assertFalse(pat.visit(test_neg, patt_ast))
 
     def test_with_nbits(self):
@@ -144,7 +144,7 @@ class TestPatternMatcher(PatternMatcherTest):
         for input_string, nbits in tests:
             input_ast = ast.parse(input_string)
             pattern_ast = ast.parse("(A ^ ~B) + 2*(A | B)")
-            pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast, nbits)
+            pat = pattern_matcher.PatternMatcher(input_ast, nbits)
             self.assertTrue(pat.visit(input_ast, pattern_ast))
 
     def test_real(self):
@@ -159,7 +159,7 @@ class TestPatternMatcher(PatternMatcherTest):
         'Test with different types of roots'
         pattern_ast = ast.parse("A + B", mode='eval')
         input_ast = ast.parse("x + y", mode='eval')
-        pat = pattern_matcher.PatternMatcher(input_ast, pattern_ast)
+        pat = pattern_matcher.PatternMatcher(input_ast)
         self.assertTrue(pat.visit(input_ast, pattern_ast))
 
 

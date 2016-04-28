@@ -17,7 +17,7 @@ Classes and methods included in this module are:
 
 
 import ast
-import copy
+from copy import deepcopy
 import itertools
 import astunparse
 
@@ -41,7 +41,7 @@ class EvalPattern(ast.NodeTransformer):
     def visit_Name(self, node):
         'Replace wildcards with supposed value'
         if node.id in self.wildcards:
-            return copy.deepcopy(self.wildcards[node.id])
+            return deepcopy(self.wildcards[node.id])
         return node
 
 
@@ -52,7 +52,7 @@ class PatternMatcher(asttools.Comparator):
     Example : A + B will match (x | 34) + (y*67)
     """
 
-    def __init__(self, root, pattern_ast, nbits=0):
+    def __init__(self, root, nbits=0):
         'Init different components of pattern matcher'
 
         super(PatternMatcher, self).__init__()
@@ -61,10 +61,6 @@ class PatternMatcher(asttools.Comparator):
         self.wildcards = {}
         # wildcards <-> values that are known not to work
         self.no_solution = []
-        # potential no_solutions for node other than root
-        self.pot_no_sol = []
-        # wildcards <-> value permutations
-        self.perms = None
 
         # root node of expression
         if isinstance(root, ast.Module):
@@ -73,16 +69,8 @@ class PatternMatcher(asttools.Comparator):
             self.root = root.body
         else:
             self.root = root
-
-        # compute nb of bits if not indicated by user
         if not nbits:
-            getsize = asttools.GetSize()
-            getsize.visit(self.root)
-            if getsize.result:
-                self.nbits = getsize.result
-            # default bitsize is 8
-            else:
-                self.nbits = 8
+            self.nbits = asttools.get_default_nbits(self.root)
         else:
             self.nbits = nbits
 
@@ -91,48 +79,43 @@ class PatternMatcher(asttools.Comparator):
         getvar.visit(self.root)
         self.variables = getvar.result
 
-        # list of used wildcards
-        getwild = asttools.GetVariables()
-        getwild.visit(pattern_ast)
-        self.list_wildcards = [c for c in getwild.result if c.isupper()]
-
-    def check_eq_z3(self, node1, node2):
+    def check_eq_z3(self, target, pattern):
         'Check equivalence with z3'
         #pylint: disable=exec-used
 
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
-        target_ast = copy.deepcopy(node1)
+        target_ast = deepcopy(target)
         target_ast = asttools.Unleveling().visit(target_ast)
         ast.fix_missing_locations(target_ast)
         code1 = compile(ast.Expression(target_ast), '<string>', mode='eval')
-        eval_pattern = copy.deepcopy(node2)
+        eval_pattern = deepcopy(pattern)
         EvalPattern(self.wildcards).visit(eval_pattern)
         eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
         gvar = asttools.GetVariables()
         gvar.visit(eval_pattern)
-        if gvar.result.intersection(set(self.list_wildcards)) != set():
+        if any(var.isupper() for var in gvar.result):
             # do not check if all patterns have not been replaced
             return False
         code2 = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
         sol = z3.Solver()
         if isinstance(eval(code1), int) and eval(code1) == 0:
-            # cases where node1 == 0 are too permissive
+            # cases where target == 0 are too permissive
             return False
         sol.add(eval(code1) != eval(code2))
         return sol.check().r == -1
 
-    def check_wildcard(self, node1, node2):
+    def check_wildcard(self, target, pattern):
         'Check wildcard value or affect it'
-        if node2.id in self.wildcards:
-            exact_comp = asttools.Comparator().visit(self.wildcards[node2.id],
-                                                     node1)
+        if pattern.id in self.wildcards:
+            wild_value = self.wildcards[pattern.id]
+            exact_comp = asttools.Comparator().visit(wild_value, target)
             if exact_comp:
                 return True
-            return self.check_eq_z3(node1, self.wildcards[node2.id])
+            return self.check_eq_z3(target, self.wildcards[pattern.id])
         else:
-            self.wildcards[node2.id] = node1
+            self.wildcards[pattern.id] = target
             return True
 
     def get_model(self, target, pattern):
@@ -155,16 +138,19 @@ class PatternMatcher(asttools.Comparator):
         if wil in self.wildcards:
             if not isinstance(self.wildcards[wil], ast.Num):
                 return False
-            exec("%s = z3.BitVecVal(%d, %d)" % (wil, self.wildcards[wil].n,
-                                                self.nbits))
+            folded = deepcopy(pattern)
+            folded = asttools.Unleveling().visit(folded)
+            EvalPattern(self.wildcards).visit(folded)
+            folded = asttools.ConstFolding(folded, 2**self.nbits).visit(folded)
+            return folded.n == target.n
         else:
             exec("%s = z3.BitVec('%s', %d)" % (wil, wil, self.nbits))
-        eval_pattern = copy.deepcopy(pattern)
+        eval_pattern = deepcopy(pattern)
         eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
-        code2 = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
+        code = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
         sol = z3.Solver()
-        sol.add(target.n == eval(code2))
+        sol.add(target.n == eval(code))
         if sol.check().r == 1:
             model = sol.model()
             for inst in model.decls():
@@ -181,7 +167,7 @@ class PatternMatcher(asttools.Comparator):
             if isinstance(target, ast.Num):
                 # if pattern is only a constant, evaluate and compare
                 # to target
-                pattcopy = copy.deepcopy(pattern)
+                pattcopy = deepcopy(pattern)
                 eval_pat = asttools.ConstFolding(pattcopy,
                                                  2**self.nbits).visit(pattcopy)
                 return self.visit(target, eval_pat)
@@ -275,7 +261,7 @@ class PatternMatcher(asttools.Comparator):
 #        getwild.visit(pattern)
 #        wilds = list(getwild.result)
 #        if all(wil in self.wildcards for wil in wilds):
-#            eval_pattern = copy.deepcopy(pattern)
+#            eval_pattern = deepcopy(pattern)
 #            eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)
 #            return self.check_eq_z3(target, eval_pattern)
 
@@ -307,77 +293,75 @@ class PatternMatcher(asttools.Comparator):
         mod = 2**self.nbits
         return (target.n % mod) == (pattern.n % mod)
 
-    def visit_BinOp(self, node1, node2):
+    def visit_BinOp(self, target, pattern):
         'Check type of operation and operands'
 
-        # print "visiting", node1.op, node2.op
-
-        if type(node1.op) != type(node2.op):
-            return self.check_pattern(node1, node2)
+        if type(target.op) != type(pattern.op):
+            return self.check_pattern(target, pattern)
 
         # if operation is commutative, left and right operands are
         # interchangeable
-        previous_state = copy.deepcopy(self.wildcards)
-        cond1 = (self.visit(node1.left, node2.left) and
-                 self.visit(node1.right, node2.right))
+        previous_state = deepcopy(self.wildcards)
+        cond1 = (self.visit(target.left, pattern.left) and
+                 self.visit(target.right, pattern.right))
         state = asttools.apply_hooks()
         nos = self.wildcards in self.no_solution
         asttools.restore_hooks(state)
         if cond1 and not nos:
             return True
         if nos:
-            self.wildcards = copy.deepcopy(previous_state)
+            self.wildcards = deepcopy(previous_state)
         if not cond1 and not nos:
-            wildsbackup = copy.deepcopy(self.wildcards)
-            self.wildcards = copy.deepcopy(previous_state)
-            cond1_prime = (self.visit(node1.right, node2.right) and
-                           self.visit(node1.left, node2.left))
+            # different visiting order might give different results
+            wildsbackup = deepcopy(self.wildcards)
+            self.wildcards = deepcopy(previous_state)
+            cond1_prime = (self.visit(target.right, pattern.right) and
+                           self.visit(target.left, pattern.left))
             if cond1_prime:
                 return True
             else:
-                self.wildcards = copy.deepcopy(wildsbackup)
+                self.wildcards = deepcopy(wildsbackup)
 
-        if isinstance(node1.op, (ast.Add, ast.Mult,
-                                 ast.BitAnd, ast.BitOr, ast.BitXor)):
-            cond2 = (self.visit(node1.left, node2.right) and
-                     self.visit(node1.right, node2.left))
+        # commutative operators
+        if isinstance(target.op, (ast.Add, ast.Mult,
+                                  ast.BitAnd, ast.BitOr, ast.BitXor)):
+            cond2 = (self.visit(target.left, pattern.right) and
+                     self.visit(target.right, pattern.left))
             if cond2:
                 return True
-            wildsbackup = copy.deepcopy(self.wildcards)
-            self.wildcards = copy.deepcopy(previous_state)
-            cond2_prime = (self.visit(node1.right, node2.left) and
-                           self.visit(node1.left, node2.right))
+            wildsbackup = deepcopy(self.wildcards)
+            self.wildcards = deepcopy(previous_state)
+            cond2_prime = (self.visit(target.right, pattern.left) and
+                           self.visit(target.left, pattern.right))
             if cond2_prime:
                 return True
             else:
-                self.wildcards = copy.deepcopy(wildsbackup)
+                self.wildcards = deepcopy(wildsbackup)
 
             # if those affectations don't work, try with another order
-            if node1 == self.root:
+            if target == self.root:
                 self.no_solution.append(self.wildcards)
-                self.wildcards = copy.deepcopy(previous_state)
-                cond1 = (self.visit(node1.left, node2.left) and
-                         self.visit(node1.right, node2.right))
+                self.wildcards = deepcopy(previous_state)
+                cond1 = (self.visit(target.left, pattern.left) and
+                         self.visit(target.right, pattern.right))
                 if cond1:
                     return True
-                cond2 = (self.visit(node1.left, node2.right)
-                         and self.visit(node1.right, node2.left))
+                cond2 = (self.visit(target.left, pattern.right)
+                         and self.visit(target.right, pattern.left))
                 return cond1 or cond2
-        self.wildcards = copy.deepcopy(previous_state)
+        self.wildcards = deepcopy(previous_state)
         return False
 
     def visit_BoolOp(self, target, pattern):
-        'Match pattern on leveled operators of same length'
-
-        if type(target.op) != type(pattern.op):
+        'Match pattern on leveled operators of same length and same type'
+        conds = (type(target.op) == type(pattern.op) and
+                 len(target.values) == len(pattern.values))
+        if not conds:
             return False
-        if len(target.values) != len(pattern.values):
-            return False
-
         # try every combination wildcard <=> value
-        old_context = copy.deepcopy(self.wildcards)
+        old_context = deepcopy(self.wildcards)
         for perm in itertools.permutations(target.values):
-            self.wildcards = copy.deepcopy(old_context)
+            self.wildcards = deepcopy(old_context)
             res = True
             i = 0
             for i in range(len(pattern.values)):
@@ -395,8 +379,7 @@ def match(target_str, pattern_str):
     pattern_ast = ast.parse(pattern_str, mode="eval").body
     pattern_ast = pre_processing.all_preprocessings(pattern_ast)
     pattern_ast = asttools.LevelOperators(ast.Add).visit(pattern_ast)
-    return PatternMatcher(target_ast, pattern_ast).visit(target_ast,
-                                                         pattern_ast)
+    return PatternMatcher(target_ast).visit(target_ast, pattern_ast)
 
 
 class PatternReplacement(ast.NodeTransformer):
@@ -414,11 +397,11 @@ class PatternReplacement(ast.NodeTransformer):
         else:
             self.patt_ast = patt_ast
         if isinstance(rep_ast, ast.Module):
-            self.rep_ast = copy.deepcopy(rep_ast.body[0].value)
+            self.rep_ast = deepcopy(rep_ast.body[0].value)
         elif isinstance(rep_ast, ast.Expression):
-            self.rep_ast = copy.deepcopy(rep_ast.body)
+            self.rep_ast = deepcopy(rep_ast.body)
         else:
-            self.rep_ast = copy.deepcopy(rep_ast)
+            self.rep_ast = deepcopy(rep_ast)
 
         if not nbits:
             getsize = asttools.GetSize()
@@ -433,10 +416,10 @@ class PatternReplacement(ast.NodeTransformer):
 
     def visit_BinOp(self, node):
         'Check if node is matching the pattern; if not, visit children'
-        pat = PatternMatcher(node, self.patt_ast, self.nbits)
+        pat = PatternMatcher(node, self.nbits)
         matched = pat.visit(node, self.patt_ast)
         if matched:
-            repc = copy.deepcopy(self.rep_ast)
+            repc = deepcopy(self.rep_ast)
             new_node = EvalPattern(pat.wildcards).visit(repc)
             return new_node
         else:
@@ -447,7 +430,7 @@ class PatternReplacement(ast.NodeTransformer):
 
         if isinstance(self.patt_ast, ast.BoolOp):
             if len(node.values) == len(self.patt_ast.values):
-                pat = PatternMatcher(node, self.patt_ast, self.nbits)
+                pat = PatternMatcher(node, self.nbits)
                 matched = pat.visit(node, self.patt_ast)
                 if matched:
                     new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
@@ -460,7 +443,7 @@ class PatternReplacement(ast.NodeTransformer):
                                                     len(self.patt_ast.values)):
                     rest = [elem for elem in node.values if not elem in combi]
                     testnode = ast.BoolOp(node.op, list(combi))
-                    pat = PatternMatcher(testnode, self.patt_ast, self.nbits)
+                    pat = PatternMatcher(testnode, self.nbits)
                     matched = pat.visit(testnode, self.patt_ast)
                     if matched:
                         new = EvalPattern(pat.wildcards).visit(self.rep_ast)
@@ -476,7 +459,7 @@ class PatternReplacement(ast.NodeTransformer):
             for combi in itertools.combinations(node.values, 2):
                 rest = [elem for elem in node.values if not elem in combi]
                 testnode = ast.BinOp(combi[0], op, combi[1])
-                pat = PatternMatcher(testnode, self.patt_ast, self.nbits)
+                pat = PatternMatcher(testnode, self.nbits)
                 matched = pat.visit(testnode, self.patt_ast)
                 if matched:
                     new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
@@ -502,8 +485,8 @@ def replace(target_str, pattern_str, replacement_str):
 
 
 # Used for debug purposes:
-#pylint: disable=invalid-name
 if __name__ == '__main__':
+    #pylint: disable=invalid-name
     patt_string = "A + B + (~A & ~B)"
     test = "x + y + (~x & y)"
     repl = "(A & B) - 1"
