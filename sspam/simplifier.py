@@ -125,11 +125,17 @@ class Simplifier(ast.NodeTransformer):
         node.value = pattern_matcher.EvalPattern(
             self.context).visit(node.value)
         old_value = deepcopy(node.value)
+        old_value = asttools.LevelOperators().visit(old_value)
         node.value = self.simplify(node.value, self.nbits)
+        copyvalue = deepcopy(node.value)
+        copyvalue = asttools.LevelOperators().visit(copyvalue)
         # simplify until fixpoint is reached
-        while not asttools.Comparator().visit(old_value, node.value):
+        while not asttools.Comparator().visit(old_value, copyvalue):
             old_value = deepcopy(node.value)
+            old_value = asttools.LevelOperators().visit(old_value)
             node.value = self.simplify(node.value, self.nbits)
+            copyvalue = deepcopy(node.value)
+            copyvalue = asttools.LevelOperators().visit(copyvalue)
         for target in node.targets:
             self.context[target.id] = node.value
         return node
@@ -137,11 +143,17 @@ class Simplifier(ast.NodeTransformer):
     def visit_Expr(self, node):
         'Simplify expression and replace it'
         old_value = deepcopy(node.value)
+        old_value = asttools.LevelOperators().visit(old_value)
         node.value = self.simplify(node.value, self.nbits)
+        copyvalue = deepcopy(node.value)
+        copyvalue = asttools.LevelOperators().visit(copyvalue)
         # simplify until fixpoint is reached
-        while not asttools.Comparator().visit(old_value, node.value):
+        while not asttools.Comparator().visit(old_value, copyvalue):
             old_value = deepcopy(node.value)
+            old_value = asttools.LevelOperators().visit(old_value)
             node.value = self.simplify(node.value, self.nbits)
+            copyvalue = deepcopy(node.value)
+            copyvalue = asttools.LevelOperators().visit(copyvalue)
         return node
 
 
