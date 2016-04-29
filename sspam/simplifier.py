@@ -132,10 +132,13 @@ class Simplifier(ast.NodeTransformer):
         # simplify until fixpoint is reached
         while not asttools.Comparator().visit(old_value, copyvalue):
             old_value = deepcopy(node.value)
-            old_value = asttools.LevelOperators().visit(old_value)
             node.value = self.simplify(node.value, self.nbits)
             copyvalue = deepcopy(node.value)
+            if len(unparse(copyvalue)) > len(unparse(old_value)):
+                node.value = deepcopy(old_value)
+                break
             copyvalue = asttools.LevelOperators().visit(copyvalue)
+            old_value = asttools.LevelOperators().visit(old_value)
         for target in node.targets:
             self.context[target.id] = node.value
         return node

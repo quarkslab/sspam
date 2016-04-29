@@ -248,6 +248,7 @@ class PatternMatcher(asttools.Comparator):
             eval_pattern = deepcopy(pattern)
             eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)
             return self.check_eq_z3(target, eval_pattern)
+        return False
 
     def check_pattern(self, target, pattern):
         'Try to match pattern written in different ways'
@@ -287,6 +288,7 @@ class PatternMatcher(asttools.Comparator):
         if multnode:
             return self.check_twomult(target, pattern)
 
+        # return self.general_check(target, pattern)
         return False
 
     def visit(self, target, pattern):
