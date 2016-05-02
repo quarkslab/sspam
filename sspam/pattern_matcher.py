@@ -30,6 +30,10 @@ from sspam.tools import asttools
 from sspam import pre_processing
 
 
+# If set to true, pattern matcher will use z3 to match patterns
+FLEXIBLE = True
+
+
 class EvalPattern(ast.NodeTransformer):
     """
     Replace wildcards in pattern with supposed values.
@@ -87,7 +91,6 @@ class PatternMatcher(asttools.Comparator):
     def check_eq_z3(self, target, pattern):
         'Check equivalence with z3'
         #pylint: disable=exec-used
-
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
         target_ast = deepcopy(target)
@@ -118,7 +121,10 @@ class PatternMatcher(asttools.Comparator):
             exact_comp = asttools.Comparator().visit(wild_value, target)
             if exact_comp:
                 return True
-            return self.check_eq_z3(target, self.wildcards[pattern.id])
+            if FLEXIBLE:
+                return self.check_eq_z3(target, self.wildcards[pattern.id])
+            else:
+                return False
         else:
             self.wildcards[pattern.id] = target
             return True
@@ -126,11 +132,9 @@ class PatternMatcher(asttools.Comparator):
     def get_model(self, target, pattern):
         'When target is constant and wildcards have no value yet'
         #pylint: disable=exec-used
-
         if target.n == 0:
             # zero is too permissive
             return False
-
         getwild = asttools.GetVariables()
         getwild.visit(pattern)
         wilds = getwild.result
@@ -252,8 +256,6 @@ class PatternMatcher(asttools.Comparator):
 
     def check_pattern(self, target, pattern):
         'Try to match pattern written in different ways'
-        #pylint: disable=too-many-return-statements,too-many-branches
-        # should be corrected eventually
 
         if asttools.CheckConstExpr().visit(pattern):
             if isinstance(target, ast.Num):
@@ -302,7 +304,10 @@ class PatternMatcher(asttools.Comparator):
         # if types are different, we might be facing the same pattern
         # written differently
         if type(target) != type(pattern):
-            return self.check_pattern(target, pattern)
+            if FLEXIBLE:
+                return self.check_pattern(target, pattern)
+            else:
+                return False
 
         # get type of node to call the right visit_ method
         nodetype = target.__class__.__name__
@@ -319,9 +324,13 @@ class PatternMatcher(asttools.Comparator):
 
     def visit_BinOp(self, target, pattern):
         'Check type of operation and operands'
+        #pylint: disable=too-many-branches
 
         if type(target.op) != type(pattern.op):
-            return self.check_pattern(target, pattern)
+            if FLEXIBLE:
+                return self.check_pattern(target, pattern)
+            else:
+                return False
 
         # if operation is commutative, left and right operands are
         # interchangeable
