@@ -18,6 +18,7 @@ Installation
 ------------
 
 * You can install sympy and astunparse with `pip install -r requirements.txt`
+  Be careful to use pip for Python 2.7!
 
 * To install z3, you can either:
  * Compile it from [source](https://github.com/Z3Prover/z3)
