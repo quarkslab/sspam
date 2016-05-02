@@ -469,6 +469,8 @@ class LevelOperators(ast.NodeTransformer):
                         self.leveled_op[node].append(node.left)
                 else:
                     self.generic_visit(node)
+            else:
+                self.generic_visit(node)
 
         else:
             current_leveling = self.current_leveling

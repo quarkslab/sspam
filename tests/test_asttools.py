@@ -302,6 +302,22 @@ class TestLeveling(unittest.TestCase):
             test_ast = asttools.LevelOperators(ast.Add).visit(test_ast)
             self.assertTrue(asttools.Comparator().visit(test_ast, ref_ast))
 
+    def test_differentops(self):
+        'Test with other types of operators'
+        tests = [("(3 & 5 & 6)",
+                  ast.BoolOp(ast.BitAnd(),
+                             [ast.Num(3), ast.Num(5), ast.Num(6)])),
+                 ("(1 ^ 2 ^ 3) - 4",
+                  ast.BinOp(ast.BoolOp(ast.BitXor(),
+                                       [ast.Num(1), ast.Num(2), ast.Num(3)]),
+                            ast.Add(),
+                            ast.BinOp(ast.Num(-1), ast.Mult(), ast.Num(4))))]
+        for teststring, ref_ast in tests:
+            test_ast = ast.parse(teststring, mode="eval").body
+            test_ast = pre_processing.all_preprocessings(test_ast)
+            test_ast = asttools.LevelOperators().visit(test_ast)
+            self.assertTrue(asttools.Comparator().visit(test_ast, ref_ast))
+
     def test_withUnaryOp(self):
         'Test with UnaryOp involved'
         tests = [("5 + (-(6 + 2)) + 3",
