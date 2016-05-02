@@ -41,15 +41,37 @@ class SubToMult(ast.NodeTransformer):
         self.generic_visit(node)
         if isinstance(node.op, ast.Sub):
             node.op = ast.Add()
-            node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
+            cond_mult = (isinstance(node.right, ast.BinOp) and
+                         isinstance(node.right.op, ast.Mult))
+            if cond_mult:
+                if isinstance(node.right.left, ast.Num):
+                    node.right.left = ast.Num(-node.right.left.n)
+                elif isinstance(node.right.right, ast.Num):
+                    node.right.right = ast.Num(-node.right.right.n)
+                else:
+                    node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
+            else:
+                node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
         return node
 
     def visit_UnaryOp(self, node):
         'Change -x to (-1)*x'
-
         self.generic_visit(node)
         if isinstance(node.op, ast.USub):
-            node = ast.BinOp(ast.Num(-1), ast.Mult(), node.operand)
+            ope = node.operand
+            cond_mult = (isinstance(ope, ast.BinOp) and
+                         isinstance(ope.op, ast.Mult))
+            if cond_mult:
+                if isinstance(ope.left, ast.Num):
+                    node = ast.BinOp(ast.Num(-ope.left.n), ast.Mult(),
+                                     ope.right)
+                elif isinstance(ope.right, ast.Num):
+                    node = ast.BinOp(ope.left, ast.Mult(),
+                                     ast.Num(-ope.right.n))
+                else:
+                    node = ast.BinOp(ast.Num(-1), ast.Mult(), ope)
+            else:
+                node = ast.BinOp(ast.Num(-1), ast.Mult(), ope)
         return node
 
 

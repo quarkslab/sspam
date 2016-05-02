@@ -63,10 +63,9 @@ class TestPatternMatcher(PatternMatcherTest):
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string, True)
         pattern_string = "A + B - 2*(A & B)"
-        test_pos = ["x + 108 - 2*(x & 108)"]  # "-2*(x & 108) + x + 108",
-                    # "(x & 108)*(-2) + x + 108"]
-                    # those test work when the commented part of
-                    # subtomult is activated
+        test_pos = ["x + 108 - 2*(x & 108)", "-2*(x & 108) + x + 108",
+                    "(x & 108)*(-2) + x + 108",
+                    "254*(x & y) + x + y"]
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string, True)
 
