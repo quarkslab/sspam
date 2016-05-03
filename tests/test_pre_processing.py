@@ -5,7 +5,6 @@
 """
 #pylint: disable=relative-import
 
-import ast
 import unittest
 
 from sspam import pre_processing
@@ -47,8 +46,7 @@ class RemoveUselessAnd(templates.AstCompCase):
         tests = [("x & 255", "x", 8), ("x & 255", "x & 255", 32),
                  ("x & 65535", "x", 16), ("x & 255", "x & 255", 16)]
         for instring, refstring, nbits in tests:
-            remov = pre_processing.RemoveUselessAnd(ast.parse(refstring),
-                                                    nbits)
+            remov = pre_processing.RemoveUselessAnd(nbits)
             self.generic_AstCompTest(instring, refstring, remov)
 
 

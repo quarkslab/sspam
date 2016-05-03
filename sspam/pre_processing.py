@@ -35,6 +35,9 @@ class SubToMult(ast.NodeTransformer):
     Subs are a pain in the ass. Let's change them to *(-1)
     """
 
+    def __init__(self, nbits=0):
+        self.nbits = nbits
+
     def visit_BinOp(self, node):
         'Change operator - to a *(-1)'
 
@@ -45,11 +48,22 @@ class SubToMult(ast.NodeTransformer):
                          isinstance(node.right.op, ast.Mult))
             if cond_mult:
                 if isinstance(node.right.left, ast.Num):
-                    node.right.left = ast.Num(-node.right.left.n)
+                    coeff = node.right.left
+                    operand = node.right.right
                 elif isinstance(node.right.right, ast.Num):
-                    node.right.right = ast.Num(-node.right.right.n)
+                    coeff = node.right.right
+                    operand = node.right.left
                 else:
                     node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
+                    return node
+                # trying to "simplify" constant coeffs if possible
+                if self.nbits:
+                    if (-coeff.n) % 2**self.nbits == 1:
+                        node.right = operand
+                    else:
+                        coeff.n = -coeff.n % 2**self.nbits
+                else:
+                    coeff.n = -coeff.n
             else:
                 node.right = ast.BinOp(ast.Num(-1), ast.Mult(), node.right)
         return node
@@ -95,9 +109,7 @@ class RemoveUselessAnd(ast.NodeTransformer):
     (A & 0xFF...FF) == A
     """
 
-    def __init__(self, expr_ast, nbits):
-        if not nbits:
-            nbits = asttools.get_default_nbits(expr_ast)
+    def __init__(self, nbits):
         self.nbits = nbits
 
     def visit_BinOp(self, node):
@@ -118,6 +130,18 @@ def all_preprocessings(asttarget, nbits=0):
     'Apply all pre-processing transforms'
     asttarget = ShiftToMult().visit(asttarget)
     asttarget = SubToMult().visit(asttarget)
-    asttarget = RemoveUselessAnd(asttarget, nbits).visit(asttarget)
+    asttarget = RemoveUselessAnd(nbits).visit(asttarget)
+    ast.fix_missing_locations(asttarget)
+    return asttarget
+
+
+def all_target_preprocessings(asttarget, nbits=0):
+    'Apply all pre-processing transforms for target ast'
+    if not nbits:
+        nbits = asttools.get_default_nbits(asttarget)
+    asttarget = ShiftToMult().visit(asttarget)
+    asttarget = NotToInv().visit(asttarget)
+    asttarget = SubToMult(nbits).visit(asttarget)
+    asttarget = RemoveUselessAnd(nbits).visit(asttarget)
     ast.fix_missing_locations(asttarget)
     return asttarget

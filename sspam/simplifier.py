@@ -12,7 +12,7 @@ import os.path
 
 from sspam.tools import asttools
 from sspam import pattern_matcher
-from sspam import pre_processing
+from sspam.pre_processing import all_preprocessings, all_target_preprocessings
 from sspam import arithm_simpl
 
 
@@ -64,7 +64,7 @@ class Simplifier(ast.NodeTransformer):
         self.patterns = []
         for pattern, replace in rules_list:
             patt_ast = ast.parse(pattern, mode="eval").body
-            patt_ast = pre_processing.all_preprocessings(patt_ast, self.nbits)
+            patt_ast = all_preprocessings(patt_ast, self.nbits)
             patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
             rep_ast = ast.parse(replace, mode="eval").body
             self.patterns.append((patt_ast, rep_ast))
@@ -75,8 +75,7 @@ class Simplifier(ast.NodeTransformer):
             print "before: "
             print unparse(expr_ast)
             print ""
-        expr_ast = pre_processing.all_preprocessings(expr_ast, self.nbits)
-        expr_ast = pre_processing.NotToInv().visit(expr_ast)
+        expr_ast = all_target_preprocessings(expr_ast, self.nbits)
         expr_ast = asttools.LevelOperators(ast.Add).visit(expr_ast)
         for pattern, repl in self.patterns:
             rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)

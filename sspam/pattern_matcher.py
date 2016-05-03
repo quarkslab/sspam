@@ -407,7 +407,7 @@ class PatternMatcher(asttools.Comparator):
 def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
     target_ast = ast.parse(target_str, mode="eval").body
-    target_ast = pre_processing.all_preprocessings(target_ast)
+    target_ast = pre_processing.all_target_preprocessings(target_ast)
     target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
     pattern_ast = ast.parse(pattern_str, mode="eval").body
     pattern_ast = pre_processing.all_preprocessings(pattern_ast)
@@ -512,7 +512,6 @@ def replace(target_str, pattern_str, replacement_str):
     patt_ast = pre_processing.all_preprocessings(patt_ast)
     patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
     rep_ast = ast.parse(replacement_str)
-
     rep = PatternReplacement(patt_ast, target_ast, rep_ast)
     return rep.visit(target_ast)
 
@@ -520,10 +519,9 @@ def replace(target_str, pattern_str, replacement_str):
 # Used for debug purposes:
 if __name__ == '__main__':
     #pylint: disable=invalid-name
-    patt_string = "(A ^ ~B) + 2*(A | B)"
-    test = "((((g + 45) | (12 & n)) * 2) + ((- g - 46) ^ (12 & n)))"
-    test = "((g + 45) | y)*2 + ((-g -46) ^ y)"
-    repl = "A + B"
+    patt_string = "A + B - 2*(A & B)"
+    test = "x + 108 - 2*(x & 108)"
+    repl = "A ^ B"
 
     print match(test, patt_string)
     print "-"*80
