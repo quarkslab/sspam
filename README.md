@@ -68,3 +68,13 @@ To run tests of sspam:
 $ cd tests/
 $ python run_all_tests.py
 ```
+
+
+Contribute
+----------
+
+To contribute to sspam, create a branch with your contribution
+(feature, fix...). Please use the script `check_codestyle.sh` provided
+for some basic checkings of your code. As not all errors of pylint
+might be relevant, you can use `#pylint: disable=` comments in your
+code to disable irrelevant errors.
