@@ -39,7 +39,8 @@ DEFAULT_RULES = [("(A ^ ~B) + 2*(A | B)", "A + B - 1"),
                  ("A + B + (~A & ~B)", "(A & B) - 1"),
                  ("A + B + 2*(~A | ~B)", "(A ^ B) - 2"),
                  # makes test_my_mba.py fail if higher in the list
-                 ("((2*A + 1) & 2*B)", "(2*A & 2*B)")]
+                 ("((2*A + 1) & 2*B)", "(2*A & 2*B)"),
+                 ("(0 | A)", "A")]
 
 
 DEBUG = False
