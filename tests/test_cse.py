@@ -71,7 +71,7 @@ class TestCSE(unittest.TestCase):
         input_ast = ast.parse(input_string)
         coderef = compile(ast.Expression(input_ast.body[0].value),
                           '<string>', 'eval')
-        jack = asttools.GetVariables()
+        jack = asttools.GetIdentifiers()
         jack.visit(input_ast)
 
         cse_string = cse.apply_cse(input_string)
@@ -84,7 +84,7 @@ class TestCSE(unittest.TestCase):
         result_ast = ast.Expression(ast.parse(result_string).body[0].value)
         result_code = compile(result_ast, '<string>', mode='eval')
 
-        for var in list(jack.result):
+        for var in list(jack.variables):
             exec("%s = z3.BitVec('%s', 8)" % (var, var))
         exec(assign_code)
         sol = z3.Solver()

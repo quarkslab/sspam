@@ -17,22 +17,37 @@ from sspam.tools import asttools
 import templates
 
 
-class TestGetVariables(templates.AstVisitorCase):
+class TestGetIdentifiers(unittest.TestCase):
     """
-    Test ast visitor GetVariables.
+    Test ast visitor GetIdentifiers.
     """
 
-    def test_basics(self):
-        'Simple tests for GetVariable'
-        corresp = [("x", {"x"}), ("3*(x & 45) + x", {"x"}),
-                   ("x + 2*y", {"y", "x"}),
-                   ("bla - azerty + 2*(azerty + bla)", {"azerty", "bla"})]
-        self.generic_AstVisitorTest(corresp, asttools.GetVariables())
+    def generic_test(self, tests):
+        'Generic test for GetIdentifiers class'
+        geti = asttools.GetIdentifiers()
+        for instring, varref, funref in tests:
+            geti.reset()
+            inast = ast.parse(instring)
+            geti.visit(inast)
+            self.assertEquals(geti.variables, varref)
+            self.assertEquals(geti.functions, funref)
+
+    def test_basics_vars(self):
+        'Simple tests for variables of GetIdentifiers'
+        tests = [("x", {"x"}, set()), ("3*(x & 45) + x", {"x"}, set()),
+                 ("x + 2*y", {"y", "x"}, set()),
+                 ("bla - azerty + 2*(azerty + bla)", {"azerty", "bla"}, set())]
+        self.generic_test(tests)
 
     def test_novariable(self):
         'Test when there is no variable'
-        self.generic_AstVisitorTest('(3 + 34)*2', set(),
-                                    asttools.GetVariables())
+        self.generic_test([('(3 + 34)*2', set(), set())])
+
+    def test_basics_funs(self):
+        'Simple tests for functions of GetIdentifiers'
+        tests = [("a()", set(), {"a"}),
+                 ("foo(a, b, c)", {'a', 'b', 'c'}, {'foo'})]
+        self.generic_test(tests)
 
 
 class TestGetSize(templates.AstVisitorCase):

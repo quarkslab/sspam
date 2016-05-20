@@ -78,10 +78,11 @@ class PatternMatcher(asttools.Comparator):
         else:
             self.nbits = nbits
 
-        # variables for z3 evaluation
-        getvar = asttools.GetVariables()
-        getvar.visit(self.root)
-        self.variables = getvar.result
+        # identifiers for z3 evaluation
+        getid = asttools.GetIdentifiers()
+        getid.visit(self.root)
+        self.variables = getid.variables
+        self.functions = getid.functions
 
     @staticmethod
     def is_wildcard(node):
@@ -91,6 +92,13 @@ class PatternMatcher(asttools.Comparator):
     def check_eq_z3(self, target, pattern):
         'Check equivalence with z3'
         #pylint: disable=exec-used
+        getid = asttools.GetIdentifiers()
+        getid.visit(target)
+        if getid.functions:
+            # not checking exprs with functions for now, because Z3
+            # does not seem to support functions with arbitrary number
+            # of arguments
+            return False
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
         target_ast = deepcopy(target)
@@ -101,9 +109,9 @@ class PatternMatcher(asttools.Comparator):
         EvalPattern(self.wildcards).visit(eval_pattern)
         eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
-        gvar = asttools.GetVariables()
+        gvar = asttools.GetIdentifiers()
         gvar.visit(eval_pattern)
-        if any(var.isupper() for var in gvar.result):
+        if any(var.isupper() for var in gvar.variables):
             # do not check if all patterns have not been replaced
             return False
         code2 = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
@@ -135,9 +143,9 @@ class PatternMatcher(asttools.Comparator):
         if target.n == 0:
             # zero is too permissive
             return False
-        getwild = asttools.GetVariables()
+        getwild = asttools.GetIdentifiers()
         getwild.visit(pattern)
-        wilds = getwild.result
+        wilds = getwild.variables
         # let's reduce the model to one wildcard for now
         # otherwise it adds a lot of checks...
         if len(wilds) > 1:
@@ -235,9 +243,9 @@ class PatternMatcher(asttools.Comparator):
                 return False
 
         # get all wildcards in operand and check if they have value
-        getwild = asttools.GetVariables()
+        getwild = asttools.GetIdentifiers()
         getwild.visit(operand)
-        wilds = getwild.result
+        wilds = getwild.variables
         for wil in wilds:
             if wil not in self.wildcards:
                 return False
@@ -245,9 +253,9 @@ class PatternMatcher(asttools.Comparator):
 
     def general_check(self, target, pattern):
         'General check, very time-consuming, not used at the moment'
-        getwild = asttools.GetVariables()
+        getwild = asttools.GetIdentifiers()
         getwild.visit(pattern)
-        wilds = list(getwild.result)
+        wilds = list(getwild.variables)
         if all(wil in self.wildcards for wil in wilds):
             eval_pattern = deepcopy(pattern)
             eval_pattern = EvalPattern(self.wildcards).visit(eval_pattern)

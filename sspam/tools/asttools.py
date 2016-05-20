@@ -57,22 +57,30 @@ def get_default_nbits(expr_ast):
     return nbits
 
 
-class GetVariables(ast.NodeVisitor):
+class GetIdentifiers(ast.NodeVisitor):
     """
     Get all identifiers (instances of ast.Name) of an ast.
     """
 
     def __init__(self):
         'Result contains identifiers of the ast'
-        self.result = set()
+        self.variables = set()
+        self.functions = set()
 
     def reset(self):
         'Empty result set, so that instance may be re-used'
-        self.result = set()
+        self.variables = set()
+        self.functions = set()
 
     def visit_Name(self, node):
         'Add node id to result'
-        self.result.add(node.id)
+        self.variables.add(node.id)
+
+    def visit_Call(self, node):
+        'Add func id to result and visit argument'
+        self.functions.add(node.func.id)
+        for arg in node.args:
+            self.visit(arg)
 
 
 class GetSize(ast.NodeVisitor):

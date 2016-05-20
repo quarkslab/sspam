@@ -14,9 +14,10 @@ def main(expr_ast, nbits):
     'Apply sympy arithmetic simplifications to expression ast'
 
     # variables for sympy symbols
-    getvar = asttools.GetVariables()
-    getvar.visit(expr_ast)
-    variables = getvar.result
+    getid = asttools.GetIdentifiers()
+    getid.visit(expr_ast)
+    variables = getid.variables
+    functions = getid.functions
 
     original_type = type(expr_ast)
     # copying to avoid wierd pointer behaviour
@@ -33,6 +34,8 @@ def main(expr_ast, nbits):
     for var in variables:
         exec("%s = sympy.Symbol('%s')" % (var, var))
     for fun in {"mxor", "mor", "mand", "mnot", "mrshift", "mlshift"}:
+        exec("%s = sympy.Function('%s')" % (fun, fun))
+    for fun in functions:
         exec("%s = sympy.Function('%s')" % (fun, fun))
     expr_ast = asttools.ReplaceBitwiseOp().visit(expr_ast)
     ast.fix_missing_locations(expr_ast)
