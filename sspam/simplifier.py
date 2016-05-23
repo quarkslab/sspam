@@ -1,7 +1,16 @@
 #!/usr/bin/python
 """Main simplification module.
 
-Works the magic.
+Principal loop is in simplify() function:
+  - pre-processing of asts
+  - leveling of add (highly dependant of used rules in MBA
+    obfuscation)
+  - test each pattern if replacement is possible (does not break if
+    replaced, so will try all patterns remaining)
+  - bitwise simplification on XOR only (to be generalized)
+  - basic constant folding
+  - arithmetic simplification
+  - pass to compute constant values according to the current modulus
 """
 
 import ast
@@ -99,7 +108,8 @@ class Simplifier(ast.NodeTransformer):
                     print "after:    ", ast.dump(new_ast)
                     print ""
             expr_ast = new_ast
-        # bitwise simplification: this is ugly, should be "generalized"
+        # bitwise simplification: this is a ugly hack, should be
+        # "generalized"
         expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
         expr_ast = asttools.ConstFolding(expr_ast,
                                          2**self.nbits).visit(expr_ast)
