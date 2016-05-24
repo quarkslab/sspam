@@ -96,8 +96,8 @@ class PatternMatcher(asttools.Comparator):
         getid.visit(target)
         if getid.functions:
             # not checking exprs with functions for now, because Z3
-            # does not seem to support functions with arbitrary number
-            # of arguments
+            # does not seem to support function declaration with
+            # arbitrary number of arguments
             return False
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
@@ -109,6 +109,12 @@ class PatternMatcher(asttools.Comparator):
         EvalPattern(self.wildcards).visit(eval_pattern)
         eval_pattern = asttools.Unleveling().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
+        getid.reset()
+        getid.visit(eval_pattern)
+        if getid.functions:
+            # same reason as before, not using Z3 if there are
+            # functions
+            return False
         gvar = asttools.GetIdentifiers()
         gvar.visit(eval_pattern)
         if any(var.isupper() for var in gvar.variables):
@@ -530,7 +536,7 @@ def replace(target_str, pattern_str, replacement_str):
 if __name__ == '__main__':
     #pylint: disable=invalid-name
     patt_string = "A + B - (A | B)"
-    test = "0 + x + 3*x"
+    test = "f(g(x + x) + 3 + 4)"
     repl = "A & B"
 
     print match(test, patt_string)
