@@ -499,6 +499,11 @@ class LevelOperators(ast.NodeTransformer):
         self.current_leveling = ast.BinOp(None, None, None)
         return self.generic_visit(node)
 
+    def visit_Call(self, node):
+        'Calls interrupt the leveling'
+        self.current_leveling = ast.BinOp(None, None, None)
+        return self.generic_visit(node)
+
 
 class Unleveling(ast.NodeTransformer):
     """

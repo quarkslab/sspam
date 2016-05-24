@@ -347,6 +347,37 @@ class TestLeveling(unittest.TestCase):
             test_ast = asttools.LevelOperators(ast.Add).visit(test_ast)
             self.assertTrue(asttools.Comparator().visit(test_ast, ref_ast))
 
+    def test_with_funcs(self):
+        'Tests with functions'
+        tests = [
+            ("f(1 + 1 + 1)",
+             ast.Call(ast.Name('f', ast.Load()),
+                      [ast.BoolOp(ast.Add(),
+                                  [ast.Num(n) for n in [1, 1, 1]])],
+                      [],
+                      None,
+                      None)),
+            ("f(1 + 1 + g(2 + 2 + 2))",
+             ast.Call(ast.Name('f', ast.Load()),
+                      [ast.BoolOp(ast.Add(),
+                                  [ast.Num(1),
+                                   ast.Num(1),
+                                   ast.Call(ast.Name('g', ast.Load()),
+                                            [ast.BoolOp(ast.Add(),
+                                                        [ast.Num(2),
+                                                         ast.Num(2),
+                                                            ast.Num(2)])],
+                                            [],
+                                            None,
+                                            None)])],
+                      [],
+                      None,
+                      None))]
+        for teststring, ref_ast in tests:
+            test_ast = ast.parse(teststring, mode="eval").body
+            test_ast = asttools.LevelOperators(ast.Add).visit(test_ast)
+            self.assertTrue(asttools.Comparator().visit(test_ast, ref_ast))
+
     def test_noleveling(self):
         'Tests where nothing should be leveled'
         corresp = [(["a + b", "b + a"],
