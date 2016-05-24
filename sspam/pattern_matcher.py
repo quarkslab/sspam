@@ -134,6 +134,8 @@ class PatternMatcher(asttools.Comparator):
             else:
                 return False
         else:
+            if isinstance(target, ast.Num) and target.n == 0:
+                return False
             self.wildcards[pattern.id] = target
             return True
 
@@ -306,7 +308,7 @@ class PatternMatcher(asttools.Comparator):
 
         # if pattern contains is a wildcard, check value against target
         # or affect it
-        if isinstance(pattern, ast.Name) and pattern.id.isupper():
+        if self.is_wildcard(pattern):
             return self.check_wildcard(target, pattern)
 
         # if types are different, we might be facing the same pattern
@@ -527,12 +529,13 @@ def replace(target_str, pattern_str, replacement_str):
 # Used for debug purposes:
 if __name__ == '__main__':
     #pylint: disable=invalid-name
-    patt_string = "A + B - 2*(A & B)"
-    test = "x + 108 - 2*(x & 108)"
-    repl = "A ^ B"
+    patt_string = "A + B - (A | B)"
+    test = "0 + x + 3*x"
+    repl = "A & B"
 
     print match(test, patt_string)
     print "-"*80
     out = replace(test, patt_string, repl)
     print ast.dump(out)
+    out = asttools.Unleveling().visit(out)
     print astunparse.unparse(out)
