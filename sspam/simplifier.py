@@ -118,7 +118,7 @@ class Simplifier(ast.NodeTransformer):
             print "after PM: "
             print unparse(expr_ast)
             print ""
-        expr_ast = arithm_simpl.main(expr_ast, nbits)
+        expr_ast = arithm_simpl.run(expr_ast, nbits)
         expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
         if DEBUG:
             print "arithm simpl: "

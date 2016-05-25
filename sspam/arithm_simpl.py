@@ -5,12 +5,12 @@ This module simplifies symbolic expressions using only arithmetic operators.
 #pylint: disable=unused-import,exec-used
 import ast
 import sympy
-import copy
+from copy import deepcopy
 
 from sspam.tools import asttools
 
 
-def main(expr_ast, nbits):
+def run(expr_ast, nbits):
     'Apply sympy arithmetic simplifications to expression ast'
 
     # variables for sympy symbols
@@ -21,7 +21,7 @@ def main(expr_ast, nbits):
 
     original_type = type(expr_ast)
     # copying to avoid wierd pointer behaviour
-    expr_ast = copy.deepcopy(expr_ast)
+    expr_ast = deepcopy(expr_ast)
     # converting expr_ast into an ast.Expression
     if not isinstance(expr_ast, ast.Expression):
         if isinstance(expr_ast, ast.Module):
