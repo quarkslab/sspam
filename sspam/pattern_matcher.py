@@ -166,7 +166,7 @@ class PatternMatcher(asttools.Comparator):
             folded = deepcopy(pattern)
             folded = asttools.Unleveling().visit(folded)
             EvalPattern(self.wildcards).visit(folded)
-            folded = asttools.ConstFolding(folded, 2**self.nbits).visit(folded)
+            folded = asttools.ConstFolding(folded, self.nbits).visit(folded)
             return folded.n == target.n
         else:
             exec("%s = z3.BitVec('%s', %d)" % (wil, wil, self.nbits))
@@ -279,7 +279,7 @@ class PatternMatcher(asttools.Comparator):
                 # to target
                 pattcopy = deepcopy(pattern)
                 eval_pat = asttools.ConstFolding(pattcopy,
-                                                 2**self.nbits).visit(pattcopy)
+                                                 self.nbits).visit(pattcopy)
                 return self.visit(target, eval_pat)
 
         if isinstance(target, ast.Num):

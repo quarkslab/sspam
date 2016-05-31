@@ -111,8 +111,7 @@ class Simplifier(ast.NodeTransformer):
         # bitwise simplification: this is a ugly hack, should be
         # "generalized"
         expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
-        expr_ast = asttools.ConstFolding(expr_ast,
-                                         2**self.nbits).visit(expr_ast)
+        expr_ast = asttools.ConstFolding(expr_ast, self.nbits).visit(expr_ast)
         expr_ast = asttools.Unleveling().visit(expr_ast)
         if DEBUG:
             print "after PM: "

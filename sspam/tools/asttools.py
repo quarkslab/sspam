@@ -181,12 +181,12 @@ class ConstFolding(ast.NodeTransformer):
     """
     #pylint: disable=exec-used
 
-    def __init__(self, node, mod):
+    def __init__(self, node, nbits):
         'Gather constant expressions'
         analyzer = GetConstExpr()
         analyzer.visit(node)
         self.constexpr = analyzer.result
-        self.mod = mod
+        self.mod = 2**nbits
 
     def visit_BinOp(self, node):
         'If node is a constant expression, replace it with its evaluated value'

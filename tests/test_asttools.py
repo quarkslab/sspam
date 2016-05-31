@@ -94,7 +94,7 @@ class TestConstFolding(unittest.TestCase):
         if lvl:
             orig = asttools.LevelOperators().visit(orig)
             ref = asttools.LevelOperators().visit(orig)
-        orig = asttools.ConstFolding(orig, 2**nbits).visit(orig)
+        orig = asttools.ConstFolding(orig, nbits).visit(orig)
         self.assertTrue(asttools.Comparator().visit(orig, ref))
 
     def test_basics(self):
