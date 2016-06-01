@@ -125,11 +125,20 @@ def node_hash(node):
     if isinstance(node, ast.Num):
         return str(node.n),
     if isinstance(node, ast.BinOp):
-        children = [node_hash(node.left), node_hash(node.right)]
-        if isinstance(node.op, COMMUTATIVE_OPERATORS):  # commutative
-            children.sort()
-        return (type(node.op).__name__,) + tuple(children)
+        children = node_hash(node.left), node_hash(node.right)
+        return (type(node.op).__name__,) + children
     assert False, 'unhandled node type' + ast.dump(node)
+
+class HandleCommutativity(ast.NodeTransformer):
+
+    def visit_BinOp(self, node):
+        node = self.generic_visit(node)
+        if isinstance(node.op, COMMUTATIVE_OPERATORS):  # commutative
+            hash_left = node_hash(node.left)
+            hash_right = node_hash(node.right)
+            if hash_right < hash_left:
+                node.left, node.right = node.right, node.left
+        return node
 
 
 class PromoteUnaryOp(ast.NodeTransformer):
@@ -388,8 +397,8 @@ def apply_cse(expr, outputfile=None):
         expr_ast = ast.parse(exprfile.read())
     else:
         expr_ast = ast.parse(expr)
-
     PromoteUnaryOp().visit(expr_ast)
+    HandleCommutativity().visit(expr_ast)
     simple_cse(expr_ast)
     expr_ast = PostProcessing().visit(expr_ast)
     expr = astunparse.unparse(expr_ast).strip('\n')
