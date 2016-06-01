@@ -129,9 +129,14 @@ def node_hash(node):
         return (type(node.op).__name__,) + children
     assert False, 'unhandled node type' + ast.dump(node)
 
+
 class HandleCommutativity(ast.NodeTransformer):
+    """
+    Used to handle commutativity of some operators
+    """
 
     def visit_BinOp(self, node):
+        'Check commutativity and order children if commutative'
         node = self.generic_visit(node)
         if isinstance(node.op, COMMUTATIVE_OPERATORS):  # commutative
             hash_left = node_hash(node.left)
