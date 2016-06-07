@@ -21,6 +21,7 @@
 """
 
 import ast
+import math
 
 
 def flatten(lis):
@@ -105,7 +106,7 @@ class GetIdentifiers(ast.NodeVisitor):
 
 class GetSize(ast.NodeVisitor):
     """
-    Get bitsize of ast: approximate with 2**8, 2**16...
+    Get biggest bitsize of an ast.
     """
 
     def __init__(self):
@@ -120,21 +121,7 @@ class GetSize(ast.NodeVisitor):
         'Approximate nbits with n power of two'
         bitlen = (abs(node.n)).bit_length()
         if bitlen > self.result:
-            # didn't find a way to do this cleanly...
-            if bitlen == 1 or bitlen == 2:
-                self.result = bitlen
-            elif bitlen == 3 or bitlen == 4:
-                self.result = 4
-            elif bitlen > 4 and bitlen < 9:
-                self.result = 8
-            elif bitlen > 8 and bitlen < 17:
-                self.result = 16
-            elif bitlen > 16 and bitlen < 33:
-                self.result = 32
-            elif bitlen > 32 and bitlen < 65:
-                self.result = 64
-            else:
-                raise Exception("Nbits not supported")
+            self.result = int(2**(math.ceil(math.log(bitlen, 2))))
 
 
 class GetConstExpr(ast.NodeVisitor):
@@ -346,7 +333,9 @@ class GetConstMod(ast.NodeTransformer):
 
     def visit_Num(self, node):
         'Replace constant value with value mod 2^n'
-        node.n = node.n % 2**self.nbits
+        # node.n = node.n % 2**self.nbits
+        nbits = getattr(node, 'bvsize')
+        node.n = node.n % 2**nbits
         return node
 
 
