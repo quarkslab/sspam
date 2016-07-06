@@ -52,7 +52,7 @@ class ComputeBvSize(ast.NodeTransformer):
             self.generic_visit(node)
             setattr(node, 'bvsize', getattr(node.args[0], 'bvsize'))
             return node
-        setattr(node, 'bvsize', self.maxbnbits)
+        setattr(node, 'bvsize', self.maxnbits)
         return self.generic_visit(node)
 
     def visit_BinOp(self, node):
@@ -104,9 +104,11 @@ class ReduceBvSize(ast.NodeTransformer):
                 lsize = getattr(node.left, 'bvsize')
                 rsize = getattr(node.right, 'bvsize')
                 if lsize < rsize:
+                    setattr(node, 'bvsize', lsize)
                     self.reducing = lsize
                     self.visit(node.right)
                 elif rsize < lsize:
+                    setattr(node, 'bvsize', rsize)
                     self.reducing = rsize
                     self.visit(node.left)
             return self.generic_visit(node)
@@ -136,6 +138,25 @@ class ReduceBvSize(ast.NodeTransformer):
             return node
         else:
             return self.generic_visit(node)
+
+
+class RegroupBvSize(ast.NodeTransformer):
+    """
+    Applies bvN indication on biggest subgraph with same size.
+    """
+
+    def __init__(self):
+        self.parent_bvsize = 0
+
+    def visit(self, node):
+        if type(node) in {ast.BinOp, ast.UnaryOp, ast.Num, ast.Call}:
+            node_bvsize = getattr(node, 'bvsize')
+            if node_bvsize != self.parent_bvsize:
+                self.parent_bvsize = node_bvsize
+                self.generic_visit(node)
+                return ast.Call(ast.Name('bv%d' % node_bvsize, ast.Load()),
+                                [node], [], None, None)
+        return self.generic_visit(node)
 
 
 class DisplayBvSize(ast.NodeVisitor):
@@ -171,7 +192,7 @@ expr = "((((((((((((((((((((((bv64(Sym0) - bv64(0x00000008)) - bv64(0x00000008))
 
 # print getattr(a.body[0].value.left.left, 'nbits')
 
-expr = "bv32(Sym0)*bv32(256) & bv8(0xFF)"
+expr = "(bv32(rol(Sym0 + bv32(1))) - bv32(8) - bv32(8))*bv32(256) & bv8(0xFF)"
 print expr
 a = ast.parse(expr)
 ComputeBvSize(32).visit(a)
@@ -179,8 +200,11 @@ DisplayBvSize().visit(a)
 print "-"*80
 ReduceBvSize().visit(a)
 DisplayBvSize().visit(a)
-# arithm_simpl.run(a, 32) 
-print ast.dump(a)
 print astunparse.unparse(a)
 print getattr(a.body[0].value.left.right, 'bvsize')
 
+RegroupBvSize().visit(a)
+print astunparse.unparse(a)
+
+
+# bv8((((bv32(rol((Sym0 + 1))) - bv8(8)) - 8) * 256) & 255)
