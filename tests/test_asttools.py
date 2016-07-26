@@ -326,7 +326,24 @@ class TestLeveling(unittest.TestCase):
                   ast.BinOp(ast.BoolOp(ast.BitXor(),
                                        [ast.Num(1), ast.Num(2), ast.Num(3)]),
                             ast.Add(),
-                            ast.BinOp(ast.Num(-1), ast.Mult(), ast.Num(4))))]
+                            ast.BinOp(ast.Num(-1), ast.Mult(), ast.Num(4)))),
+                 ("((1 + 2 + 3) & (4 + 5))",
+                  ast.BinOp(ast.BoolOp(ast.Add(),
+                                       [ast.Num(1), ast.Num(2), ast.Num(3)]),
+                            ast.BitAnd(),
+                            ast.BinOp(ast.Num(4), ast.Add(), ast.Num(5)))),
+                 ("(1 & 2 & 3) - (4 & 5)",
+                  ast.BinOp(ast.BoolOp(ast.BitAnd(),
+                                       [ast.Num(1), ast.Num(2), ast.Num(3)]),
+                            ast.Add(),
+                            ast.BinOp(ast.Num(-1), ast.Mult(),
+                                      ast.BinOp(ast.Num(4), ast.BitAnd(),
+                                                ast.Num(5))))),
+                 ("(1 & 2 & 3) << (4 & 5)",
+                  ast.BinOp(ast.BoolOp(ast.BitAnd(),
+                                       [ast.Num(1), ast.Num(2), ast.Num(3)]),
+                            ast.LShift(),
+                            ast.BinOp(ast.Num(4), ast.BitAnd(), ast.Num(5))))]
         for teststring, ref_ast in tests:
             test_ast = ast.parse(teststring, mode="eval").body
             test_ast = pre_processing.all_preprocessings(test_ast)

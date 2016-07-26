@@ -452,13 +452,20 @@ class LevelOperators(ast.NodeTransformer):
         self.leveled_op = {}
         self.onlyop = onlyop
 
+    def child_visit(self, node):
+        'To avoid interaction between child visit'
+        self.current_leveling = ast.BinOp(None, None, None)
+        node.left = self.visit(node.left)
+        self.current_leveling = ast.BinOp(None, None, None)
+        node.right = self.visit(node.right)
+        return node
+
     def visit_BinOp(self, node):
         'Transforms BinOp into leveled BoolOp if possible'
 
         self.leveled_op.setdefault(node, [])
         if self.onlyop and type(node.op) != self.onlyop:
-            self.current_leveling = ast.BinOp(None, None, None)
-            return self.generic_visit(node)
+            return self.child_visit(node)
         if type(node.op) != type(self.current_leveling.op):
             if isinstance(node.op, (ast.Add, ast.Mult, ast.BitAnd,
                                     ast.BitOr, ast.BitXor)):
@@ -476,10 +483,9 @@ class LevelOperators(ast.NodeTransformer):
                          or type(node.left.op) != type(node.op))):
                         self.leveled_op[node].append(node.left)
                 else:
-                    self.generic_visit(node)
+                    return self.child_visit(node)
             else:
-                self.generic_visit(node)
-
+                return self.child_visit(node)
         else:
             current_leveling = self.current_leveling
             self.generic_visit(node)
