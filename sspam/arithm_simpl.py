@@ -2,7 +2,7 @@
 
 This module simplifies symbolic expressions using only arithmetic operators.
 """
-#pylint: disable=unused-import,exec-used
+# pylint: disable=unused-import,exec-used
 import ast
 import sympy
 from copy import deepcopy

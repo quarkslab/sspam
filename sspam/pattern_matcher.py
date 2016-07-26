@@ -91,7 +91,7 @@ class PatternMatcher(asttools.Comparator):
 
     def check_eq_z3(self, target, pattern):
         'Check equivalence with z3'
-        #pylint: disable=exec-used
+        # pylint: disable=exec-used
         getid = asttools.GetIdentifiers()
         getid.visit(target)
         if getid.functions:
@@ -147,7 +147,7 @@ class PatternMatcher(asttools.Comparator):
 
     def get_model(self, target, pattern):
         'When target is constant and wildcards have no value yet'
-        #pylint: disable=exec-used
+        # pylint: disable=exec-used
         if target.n == 0:
             # zero is too permissive
             return False
@@ -340,7 +340,7 @@ class PatternMatcher(asttools.Comparator):
 
     def visit_BinOp(self, target, pattern):
         'Check type of operation and operands'
-        #pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches
 
         if type(target.op) != type(pattern.op):
             if FLEXIBLE:
@@ -490,7 +490,7 @@ class PatternReplacement(ast.NodeTransformer):
                 # associativity n to m
                 for combi in itertools.combinations(node.values,
                                                     len(self.patt_ast.values)):
-                    rest = [elem for elem in node.values if not elem in combi]
+                    rest = [elem for elem in node.values if elem not in combi]
                     testnode = ast.BoolOp(node.op, list(combi))
                     pat = PatternMatcher(testnode, self.nbits)
                     matched = pat.visit(testnode, self.patt_ast)
@@ -506,7 +506,7 @@ class PatternReplacement(ast.NodeTransformer):
                 return self.generic_visit(node)
             op = node.op
             for combi in itertools.combinations(node.values, 2):
-                rest = [elem for elem in node.values if not elem in combi]
+                rest = [elem for elem in node.values if elem not in combi]
                 testnode = ast.BinOp(combi[0], op, combi[1])
                 pat = PatternMatcher(testnode, self.nbits)
                 matched = pat.visit(testnode, self.patt_ast)
@@ -534,7 +534,7 @@ def replace(target_str, pattern_str, replacement_str):
 
 # Used for debug purposes:
 if __name__ == '__main__':
-    #pylint: disable=invalid-name
+    # pylint: disable=invalid-name
     patt_string = "A + B - (A | B)"
     test = "f(g(x + x) + 3 + 4)"
     repl = "A & B"

@@ -23,7 +23,7 @@ def run_all_tests(quick=False):
 
     if quick:
         testmodules = [module for module in alltestmodules
-                       if not "long" in module]
+                       if "long" not in module]
     else:
         testmodules = alltestmodules
 

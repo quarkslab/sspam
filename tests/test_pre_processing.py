@@ -3,7 +3,7 @@
 - TestShiftMult
 - TestSubToMult
 """
-#pylint: disable=relative-import
+# pylint: disable=relative-import
 
 import unittest
 

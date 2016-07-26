@@ -1,6 +1,6 @@
 """Longer tests for simplifier module
 """
-#pylint: disable=relative-import
+# pylint: disable=relative-import
 
 import unittest
 import os

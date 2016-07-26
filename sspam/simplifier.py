@@ -67,7 +67,7 @@ class Simplifier(ast.NodeTransformer):
 
     def __init__(self, nbits, rules_list=DEFAULT_RULES):
         'Init context : correspondance between variables and values'
-        #pylint: disable=dangerous-default-value
+        # pylint: disable=dangerous-default-value
         self.context = {}
         self.nbits = nbits
 
@@ -201,7 +201,7 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
 
 
 if __name__ == "__main__":
-    #pylint: disable=invalid-name
+    # pylint: disable=invalid-name
     parser = argparse.ArgumentParser()
     parser.add_argument("expr", type=str, help="expression to simplify")
     parser.add_argument("-n", dest="nbits", type=int,

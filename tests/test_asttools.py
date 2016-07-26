@@ -6,7 +6,7 @@
 - TestConstFolding
 - TestGetConstMod
 """
-#pylint: disable=relative-import
+# pylint: disable=relative-import
 
 import ast
 import astunparse

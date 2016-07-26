@@ -68,7 +68,7 @@ class TestCSE(unittest.TestCase):
 
     def test_xor36(self):
         'Test that CSE of the xor36 function is equivalent to original'
-        #pylint: disable=exec-used
+        # pylint: disable=exec-used
         pwd = os.path.dirname(os.path.realpath(__file__))
         input_file = open(os.path.join(pwd, 'xor36_flat'), 'r')
         input_string = input_file.read()

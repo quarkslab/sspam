@@ -173,7 +173,7 @@ class Substitute(ast.NodeTransformer):
 
     def __init__(self, prefix, op, term_to_node,
                  rewritten_terms, result_nodes):
-        #pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments
         self.prefix = prefix
         self.op = op
         self.rewrite = dict()

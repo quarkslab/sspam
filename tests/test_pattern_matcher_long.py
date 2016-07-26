@@ -1,6 +1,6 @@
 """Contains tests of pattern matcher that are a bit long to execute.
 """
-#pylint: disable=relative-import
+# pylint: disable=relative-import
 
 import unittest
 

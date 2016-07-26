@@ -16,7 +16,7 @@ def flatten(lis):
 
 def apply_hooks():
     'Apply hooks to change hash and eq functions for ast elements'
-    #pylint: disable=protected-access,unnecessary-lambda
+    # pylint: disable=protected-access,unnecessary-lambda
     # backup !
     backup_expr_hash = ast.expr.__hash__
     backup_expr_eq = ast.expr.__eq__
@@ -158,7 +158,7 @@ class CheckConstExpr(ast.NodeVisitor):
 
     def visit_Num(self, node):
         'Num is always a constant'
-        #pylint: disable=unused-argument, no-self-use
+        # pylint: disable=unused-argument, no-self-use
         return True
 
     def visit_BinOp(self, node):
@@ -179,7 +179,7 @@ class ConstFolding(ast.NodeTransformer):
     Applies constant folding on an ast.
     Also stolen from pythran.
     """
-    #pylint: disable=exec-used
+    # pylint: disable=exec-used
 
     def __init__(self, node, nbits):
         'Gather constant expressions'
@@ -334,7 +334,7 @@ class Comparator(object):
     """
     Compare two ast to check if they're equivalent
     """
-    #pylint: disable=no-self-use
+    # pylint: disable=no-self-use
 
     def __init__(self, commut=True):
         'Specify if comparator is commutative or not'

@@ -6,7 +6,7 @@ Tested features are:
   - pure pattern matcher with various situations
   - pattern replacement
 """
-#pylint: disable=relative-import
+# pylint: disable=relative-import
 
 import ast
 import unittest
