@@ -27,6 +27,7 @@ class TestArithSimplifier(unittest.TestCase):
         nbits = 8
         tests = [("x", "x"), ("x + 3 - 3", "x"), ("x + x*y - x*y", "x"),
                  ("x + 45 + 243", "x + 32")]
+        # tests = [("x + 45 + 243", "x + 32")]
         for input_string, ref_string in tests:
             input_ast = ast.parse(input_string, mode='eval')
             ref_ast = ast.parse(ref_string, mode='eval')

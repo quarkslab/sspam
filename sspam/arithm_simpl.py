@@ -50,7 +50,7 @@ def run(expr_ast, nbits):
 
     expr_ast = asttools.ReplaceBitwiseFunctions().visit(expr_ast)
     # sympy does not consider the number of bits
-    bvsize.RecomputeBvSize().visit(expr_ast)
+    bvsize.RecomputeBvSize(nbits).visit(expr_ast)
     expr_ast = asttools.GetConstMod(nbits).visit(expr_ast)
 
     # return original type
