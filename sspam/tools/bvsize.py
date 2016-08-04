@@ -5,10 +5,6 @@ import ast
 import astunparse
 import re
 
-from sspam import simplifier
-from sspam import arithm_simpl
-from sspam.tools import asttools
-
 class SizeError(Exception):
     pass
 
@@ -83,6 +79,37 @@ class ComputeBvSize(ast.NodeTransformer):
         setattr(node, 'bvsize', self.maxnbits)
         return node
 
+class RecomputeBvSize(ast.NodeTransformer):
+    """
+    Recompute bvsize after a regroup
+    """
+
+    def __init__(self):
+        self.parent_bvsize = 0
+
+    def visit(self, node):
+        if not isinstance(node, ast.Call):
+            setattr(node, 'bvsize', self.parent_bvsize)
+            return self.generic_visit(node)
+        else:
+            return self.visit_Call(node)
+
+    def visit_Call(self, node):
+        'All child of bvX(...) are of size X until new bvX is encountered'
+        match = re.search('bv([0-9]+)$', node.func.id)
+        if match:
+            if len(node.args) != 1:
+                setattr(node, 'bvsize', self.maxnbits)
+                return self.generic_visit(node.args)
+            bvsize = int(match.group(1))
+            backup_bvsize = self.parent_bvsize
+            self.parent_bvsize = bvsize
+            self.visit(node.args[0])
+            self.parent_bvsize = backup_bvsize
+            return node.args[0]
+        setattr(node, 'bvsize', self.parent_bvsize)
+        return self.generic_visit(node)
+
 
 class ReduceBvSize(ast.NodeTransformer):
     """
@@ -152,8 +179,10 @@ class RegroupBvSize(ast.NodeTransformer):
         if type(node) in {ast.BinOp, ast.UnaryOp, ast.Num, ast.Call}:
             node_bvsize = getattr(node, 'bvsize')
             if node_bvsize != self.parent_bvsize:
+                backup_parentbv = self.parent_bvsize
                 self.parent_bvsize = node_bvsize
                 self.generic_visit(node)
+                self.parent_bvsize = backup_parentbv
                 return ast.Call(ast.Name('bv%d' % node_bvsize, ast.Load()),
                                 [node], [], None, None)
         return self.generic_visit(node)
@@ -192,19 +221,17 @@ expr = "((((((((((((((((((((((bv64(Sym0) - bv64(0x00000008)) - bv64(0x00000008))
 
 # print getattr(a.body[0].value.left.left, 'nbits')
 
-expr = "(bv32(rol(Sym0 + bv32(1))) - bv32(8) - bv32(8))*bv32(256) & bv8(0xFF)"
-print expr
-a = ast.parse(expr)
-ComputeBvSize(32).visit(a)
-DisplayBvSize().visit(a)
-print "-"*80
-ReduceBvSize().visit(a)
-DisplayBvSize().visit(a)
-print astunparse.unparse(a)
-print getattr(a.body[0].value.left.right, 'bvsize')
-
-RegroupBvSize().visit(a)
-print astunparse.unparse(a)
-
-
-# bv8((((bv32(rol((Sym0 + 1))) - bv8(8)) - 8) * 256) & 255)
+# expr = "(bv32(rol(Sym0 + bv32(1))) - bv32(8) - bv32(8))*bv32(256) & bv8(0xFF)"
+# print expr
+# a = ast.parse(expr)
+# ComputeBvSize(32).visit(a)
+# DisplayBvSize().visit(a)
+# print "-"*80
+# ReduceBvSize().visit(a)
+# DisplayBvSize().visit(a)
+# print astunparse.unparse(a)
+# 
+# RegroupBvSize().visit(a)
+# print astunparse.unparse(a)
+# 
+# a = arithm_simpl.run(a, 64)
