@@ -327,6 +327,7 @@ class GetConstMod(ast.NodeTransformer):
     """
     Replace constants with their value mod 2^n
     """
+    # pylint: disable=no-self-use
 
     def __init__(self, nbits):
         self.nbits = nbits

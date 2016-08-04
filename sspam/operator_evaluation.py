@@ -8,18 +8,19 @@ Supported operators are:
 """
 
 import ast
-import astunparse
 
 from sspam.tools import asttools
 
 
 def sspam_rol(val, rbits, maxbits):
+    'Rotation to the left'
     upper = (val << rbits) & (2**maxbits - 1)
     lower = (val >> (maxbits - (rbits % maxbits)))
     return upper | lower
 
 
 def sspam_ror(val, rbits, maxbits):
+    'Rotation to the right'
     lower = (val >> rbits % maxbits)
     upper = (val << (maxbits - (rbits % maxbits)) & (2**maxbits - 1))
     return upper | lower
@@ -35,8 +36,9 @@ class EvaluateOperators(ast.NodeTransformer):
 
     def visit_Call(self, node):
         'Check operator name and if arguments are constant'
+        # pylint: disable=no-member,unused-variable
 
-        if not node.func.id in [f.func_name for f in KNOWN_OPERATORS]:
+        if node.func.id not in [f.func_name for f in KNOWN_OPERATORS]:
             return self.generic_visit(node)
         for arg in node.args:
             if not asttools.CheckConstExpr().visit(arg):
@@ -56,8 +58,8 @@ class EvaluateOperators(ast.NodeTransformer):
         return ast.Num(res)
 
 
-a = ast.parse('sspam_rol(33 + 1, 3)')
-setattr(a.body[0].value.args[0], 'nbits', 8)
-a = EvaluateOperators().visit(a)
-print ast.dump(a)
-print astunparse.unparse(a)
+# a = ast.parse('sspam_rol(33 + 1, 3)')
+# setattr(a.body[0].value.args[0], 'nbits', 8)
+# a = EvaluateOperators().visit(a)
+# print ast.dump(a)
+# print astunparse.unparse(a)
