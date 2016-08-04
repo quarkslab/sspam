@@ -2,14 +2,18 @@
 """
 
 import ast
-import astunparse
 import re
 
+
 class SizeError(Exception):
+    """
+    Used when a size is missing on a node
+    """
     pass
 
 
 def compact_repr(node):
+    'Compact representation of node for error display'
     return ast.dump(node)[:50] + "..." + ast.dump(node)[-50:]
 
 
@@ -79,6 +83,7 @@ class ComputeBvSize(ast.NodeTransformer):
         setattr(node, 'bvsize', self.maxnbits)
         return node
 
+
 class RecomputeBvSize(ast.NodeTransformer):
     """
     Recompute bvsize after a regroup
@@ -88,6 +93,7 @@ class RecomputeBvSize(ast.NodeTransformer):
         self.parent_bvsize = 0
 
     def visit(self, node):
+        'Affect parent size, except for call nodes'
         if not isinstance(node, ast.Call):
             setattr(node, 'bvsize', self.parent_bvsize)
             return self.generic_visit(node)
@@ -99,7 +105,6 @@ class RecomputeBvSize(ast.NodeTransformer):
         match = re.search('bv([0-9]+)$', node.func.id)
         if match:
             if len(node.args) != 1:
-                setattr(node, 'bvsize', self.maxnbits)
                 return self.generic_visit(node.args)
             bvsize = int(match.group(1))
             backup_bvsize = self.parent_bvsize
@@ -189,49 +194,21 @@ class RegroupBvSize(ast.NodeTransformer):
 
 
 class DisplayBvSize(ast.NodeVisitor):
+    """
+    Display bvsize of nodes.
+    """
+    # pylint: disable=no-self-use
 
     def visit_BinOp(self, node):
-        print type(node.left), node.op, type(node.right), ': ', getattr(node, 'bvsize')
+        'Display BinOp'
+        print (type(node.left), node.op, type(node.right),
+               ': ', getattr(node, 'bvsize'))
         self.generic_visit(node)
 
     def visit_UnaryOp(self, node):
+        'Display UnaryOp'
         print node.op, type(node.operand), ': ', getattr(node, 'bvsize')
 
     def visit_Num(self, node):
+        'Display Num'
         print node.n, ': ', getattr(node, 'bvsize')
-
-
-expr = """(bv64(0x66FFFFFFF93D8D48) + sign_extend(~(byte_swap(((((ror((Mem32(Addr64((Addr64((Mem64((((((((((((((((((((((Sym0 - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) * bv64(0x00000001)) + bv64(0x00000090))) + bv64(0x00000000))) + bv64(0x100000000)))) ^ (Sym1 | (bv32(0x0001) << bcast((bcast(Sym2, bv32(0x0020)) & bv32(0x001F)),bv32(0x0020))))), bv32(0x0001)) ^ bv32(0x5DC376E0)) - bv32(0x0001)) ^bv32(0x12A41CD3)) + bv32(0x1E186A88)))), bv64(0x00000040)))"""
-
-
-expr = "(bv64(0x66FFFFFFF93D8D48) + bv64(sign_extend(~(bv32(byte_swap(((((sspam_ror((bv32(Mem32(bv64(Addr64((bv64(Addr64((bv64(Mem64((((((((((((((((((((((bv64(Sym0) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) * bv64(0x00000001)) + bv64(0x00000090)))) + bv64(0x00000000)))) + bv64(0x100000000)))))) ^ (bv32(Sym1) | (bv32(0x0001) << (bv32(Sym2) & bv32(0x001F))))), bv32(0x0001)) ^ bv32(0x5DC376E0))  - bv32(0x0001)) ^ bv32(0x12A41CD3)) + bv32(0x1E186A88))))) , bv64(0x00000040))))"
-
-expr = "((((((((((((((((((((((bv64(Sym0) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) - bv64(0x00000008)) * bv64(0x00000001)) + bv64(0x00000090)))"
-
-
-#a = ast.parse(expr)
-#ComputeBvSize(128).visit(a)
-#print ast.dump(a)
-#print astunparse.unparse(a)
-#print getattr(a.body[0].value, 'bvsize')
-#
-#a = arithm_simpl.run(a, 64)
-#print astunparse.unparse(a)
-# print simplifier.simplify(astunparse.unparse(a))
-
-# print getattr(a.body[0].value.left.left, 'nbits')
-
-# expr = "(bv32(rol(Sym0 + bv32(1))) - bv32(8) - bv32(8))*bv32(256) & bv8(0xFF)"
-# print expr
-# a = ast.parse(expr)
-# ComputeBvSize(32).visit(a)
-# DisplayBvSize().visit(a)
-# print "-"*80
-# ReduceBvSize().visit(a)
-# DisplayBvSize().visit(a)
-# print astunparse.unparse(a)
-# 
-# RegroupBvSize().visit(a)
-# print astunparse.unparse(a)
-# 
-# a = arithm_simpl.run(a, 64)
