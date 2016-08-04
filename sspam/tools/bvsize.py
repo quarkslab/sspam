@@ -89,13 +89,17 @@ class RecomputeBvSize(ast.NodeTransformer):
     Recompute bvsize after a regroup
     """
 
-    def __init__(self):
+    def __init__(self, maxbvsize):
+        self.max_bvsize = maxbvsize
         self.parent_bvsize = 0
 
     def visit(self, node):
         'Affect parent size, except for call nodes'
         if not isinstance(node, ast.Call):
-            setattr(node, 'bvsize', self.parent_bvsize)
+            if not self.parent_bvsize:
+                setattr(node, 'bvsize', self.max_bvsize)
+            else:
+                setattr(node, 'bvsize', self.parent_bvsize)
             return self.generic_visit(node)
         else:
             return self.visit_Call(node)

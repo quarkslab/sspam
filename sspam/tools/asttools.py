@@ -327,15 +327,16 @@ class GetConstMod(ast.NodeTransformer):
     """
     Replace constants with their value mod 2^n
     """
-    # pylint: disable=no-self-use
 
     def __init__(self, nbits):
         self.nbits = nbits
 
     def visit_Num(self, node):
         'Replace constant value with value mod 2^n'
-        # node.n = node.n % 2**self.nbits
-        nbits = getattr(node, 'bvsize')
+        if hasattr(node, 'bvsize'):
+            nbits = getattr(node, 'bvsize')
+        else:
+            nbits = self.nbits
         node.n = node.n % 2**nbits
         return node
 
