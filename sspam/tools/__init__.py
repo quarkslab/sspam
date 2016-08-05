@@ -1,5 +1,5 @@
 """Tools module, containing:
 
-- asttools: various script to analyze and manipulate ast
+- asttools: functions and classes to analyze and manipulate ast
 - cse: script applying common subexpression elimination
 """

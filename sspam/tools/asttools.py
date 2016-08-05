@@ -1,4 +1,24 @@
-"""Various function used to analyze and manipulate ast."""
+"""Various functions and classes used to analyze and manipulate ast.
+
+- flatten, apply_hooks and restore_hooks are used to compare sets of
+  ast.
+- get_default_nbits returns the default bitsize of an ast if it is
+  different from zero, returns 8 otherwise.
+- GetIdentifiers collects every identifiers of an ast.
+- GetSize computes the default bitsize of an ast from its constants.
+- GetConstExpr gathers all constants math expressions from an ast.
+- CheckConstExpr checks if a given node is a constant expression.
+- ConstFolding applies constant folding (computes constants
+  expressions).
+- ReplaceBitwiseOp replaces bitwise operators with functions.
+- ReplaceBitwiseFunctions replaces functions with bitwise operators.
+- GetConstMod replaces constants with their value modulo 2^n
+- Comparator is used to compare ast (modulo commutativity /
+  associativity)
+- LevelOperators turns a binary ast into an n-ary ast for associative
+  operators.
+- Unleveling turns n-ary ast into binary ast.
+"""
 
 import ast
 

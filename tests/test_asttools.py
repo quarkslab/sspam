@@ -1,10 +1,14 @@
 """Tests for asttools module.
 
-- TestGetVariables
+- TestGetIdentifiers
 - TestGetSize
 - TestGetConstExpr
 - TestConstFolding
+- TestReplaceBitwiseOp
+- TestReplaceBitwiseFunctions
 - TestGetConstMod
+- TestComparator
+- TestLeveling
 """
 # pylint: disable=relative-import
 

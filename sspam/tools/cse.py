@@ -1,5 +1,4 @@
-"""
-CSE script written by Serge!
+"""CSE script written by Serge!
 """
 
 import ast

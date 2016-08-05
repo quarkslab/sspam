@@ -4,9 +4,14 @@ This module contains several pre-processing routines that can help
 detect more patterns with PatternMatcher.
 
 Classes included in this module are:
- - ShiftToMult: transform all left shifts of a constant in
+ - ShiftToMult: transforms all left shifts of a constant in
    multiplications
- - all_preprocessings: apply all preprocessing transformations
+ - SubToMult: transforms subs operator into + (-1)*
+ - NotToInv(): transforms ~x in -x - 1
+ - RemoveUselessAnd: removes & 2^n if expression is on n bits
+ - all_preprocessings: applies all preprocessing transformations
+   designed for patterns
+ - all_target_preprocessings: NotToInv() is not used for patterns
 """
 
 import ast

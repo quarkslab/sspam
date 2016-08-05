@@ -2,6 +2,7 @@
 
 - TestShiftMult
 - TestSubToMult
+- TestRemoveUselessAnd
 """
 # pylint: disable=relative-import
 
@@ -36,7 +37,7 @@ class TestSubToMult(templates.AstCompCase):
         self.generic_AstCompTest(tests, pre_processing.SubToMult())
 
 
-class RemoveUselessAnd(templates.AstCompCase):
+class TestRemoveUselessAnd(templates.AstCompCase):
     """
     Test pre-processing removing AND 0xFF...FF
     """

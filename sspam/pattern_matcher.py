@@ -4,15 +4,16 @@ This module contains classes to detect a pattern in an expression, and
 eventually replace it with another expression if found.
 
 Classes and methods included in this module are:
- - EvalPattern: replace wildcards in a pattern with their supposed
-   values
- - PatternMatcher: return true if pattern is matched exactly on
-   expression
- - PatternReplacement: take pattern, replacement expression and target
-   expression as input ; if pattern is found in target expression,
-   replace it with replacement expression
+ - EvalPattern: replaces wildcards in a pattern with their supposed
+   values.
+ - PatternMatcher: returns true if pattern is matched on expression.
  - match: same as PatternMatcher, but with pre-processing applied
    first
+ - PatternReplacement: takes pattern, replacement expression and target
+   expression as input ; if pattern is found in target expression,
+   replaces it with replacement expression
+ - replace: same as PatternReplacement, but with pre-processing
+   applied first.
 """
 
 
