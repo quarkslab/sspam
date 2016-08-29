@@ -17,9 +17,14 @@ def compact_repr(node):
     return ast.dump(node)[:50] + "..." + ast.dump(node)[-50:]
 
 
+def getbvsize(node):
+    'Function used to quicker access bvsize'
+    return getattr(node, 'bvsize')
+
+
 class ComputeBvSize(ast.NodeTransformer):
     """
-    Computes bv size of a node and add it as an attribute.
+    Compute bv size of a node and add it as an attribute.
     """
 
     def __init__(self, maxnbits):
@@ -32,6 +37,11 @@ class ComputeBvSize(ast.NodeTransformer):
 
     def visit_Expr(self, node):
         'Expr also on maxnbits'
+        setattr(node, 'bvsize', self.maxnbits)
+        return self.generic_visit(node)
+
+    def visit_Expression(self, node):
+        'Expression also on maxbits'
         setattr(node, 'bvsize', self.maxnbits)
         return self.generic_visit(node)
 
@@ -50,7 +60,11 @@ class ComputeBvSize(ast.NodeTransformer):
         # recognized functions
         if node.func.id in {"sspam_rol", "sspam_ror"}:
             self.generic_visit(node)
-            setattr(node, 'bvsize', getattr(node.args[0], 'bvsize'))
+            # setattr(node, 'bvsize', getattr(node.args[0], 'bvsize'))
+            if isinstance(node.args[2], ast.Num):
+                setattr(node, 'bvsize', node.args[2].n)
+            else:
+                setattr(node, 'bvsize', self.maxnbits)
             return node
         setattr(node, 'bvsize', self.maxnbits)
         return self.generic_visit(node)
@@ -59,6 +73,7 @@ class ComputeBvSize(ast.NodeTransformer):
         'Deduce the size of the BinOp from the size of its operands'
 
         self.generic_visit(node)
+        lsize = getattr(node.left, 'bvsize')
         try:
             lsize = getattr(node.left, 'bvsize')
             rsize = getattr(node.right, 'bvsize')
@@ -72,14 +87,17 @@ class ComputeBvSize(ast.NodeTransformer):
 
     def visit_UnaryOp(self, node):
         'The size of a unary op is the size of its operand'
-
         self.generic_visit(node)
         setattr(node, 'bvsize', getattr(node.operand, 'bvsize'))
         return node
 
     def visit_Name(self, node):
         'Identifiers have maxbnbits for a start'
+        setattr(node, 'bvsize', self.maxnbits)
+        return node
 
+    def visit_Num(self, node):
+        'Num have maxbnbits for a start'
         setattr(node, 'bvsize', self.maxnbits)
         return node
 
