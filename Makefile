@@ -8,3 +8,9 @@ pylint:
 check:
 	$(MAKE) flake8
 	$(MAKE) pylint
+
+test-quick:
+	py.test -k 'not long'
+
+test:
+	py.test
