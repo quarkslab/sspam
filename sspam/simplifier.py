@@ -15,7 +15,6 @@ Principal loop is in simplify() function:
 
 import ast
 from astunparse import unparse
-import argparse
 from copy import deepcopy
 import os.path
 
@@ -198,15 +197,3 @@ def simplify(expr, nbits=0, custom_rules=None, use_default=True):
         rules_list = DEFAULT_RULES + custom_rules
     expr_ast = Simplifier(nbits, rules_list).visit(expr_ast)
     return unparse(expr_ast).strip('\n')
-
-
-if __name__ == "__main__":
-    # pylint: disable=invalid-name
-    parser = argparse.ArgumentParser()
-    parser.add_argument("expr", type=str, help="expression to simplify")
-    parser.add_argument("-n", dest="nbits", type=int,
-                        help="number of bits of the variables (default is 8)")
-    args = parser.parse_args()
-    print ""
-    print simplify(args.expr, args.nbits)
-    print ""
