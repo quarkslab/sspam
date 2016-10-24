@@ -1,2 +1,2 @@
-sympy
-astunparse
+sympy ~= 0.7.4
+astunparse ~= 1.3

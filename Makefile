@@ -1,4 +1,3 @@
-
 flake8:
 	flake8 --config=.flake8 sspam tests
 
@@ -10,7 +9,7 @@ check:
 	$(MAKE) pylint
 
 test-quick:
-	py.test -k 'not long'
+	pytest -k 'not long'
 
 test:
-	py.test
+	pytest
