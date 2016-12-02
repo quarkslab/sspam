@@ -420,6 +420,12 @@ class PatternMatcher(asttools.Comparator):
                 return res
         return False
 
+    def visit_UnaryOp(self, target, pattern):
+        'Match type of UnaryOp and operands'
+        if type(target.op) != type(pattern.op):
+            return False
+        return self.visit(target.operand, pattern.operand)
+
 
 def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
@@ -466,6 +472,17 @@ class PatternReplacement(ast.NodeTransformer):
 
     def visit_BinOp(self, node):
         'Check if node is matching the pattern; if not, visit children'
+        pat = PatternMatcher(node, self.nbits)
+        matched = pat.visit(node, self.patt_ast)
+        if matched:
+            repc = deepcopy(self.rep_ast)
+            new_node = EvalPattern(pat.wildcards).visit(repc)
+            return new_node
+        else:
+            return self.generic_visit(node)
+
+    def visit_UnaryOp(self, node):
+        'Check if node is matching the pattern, if not, visit operand'
         pat = PatternMatcher(node, self.nbits)
         matched = pat.visit(node, self.patt_ast)
         if matched:
