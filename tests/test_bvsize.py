@@ -5,11 +5,11 @@ Tests for bvsize module.
 # pylint: disable=relative-import
 
 import ast
-# import astunparse
+from astunparse import unparse
 import unittest
 
-from sspam.tools.bvsize import ComputeBvSize, getbvsize
-# from sspam import arithm_simpl
+from sspam.tools import bvsize
+from sspam import arithm_simpl
 
 
 class TestComputeBvSize(unittest.TestCase):
@@ -22,65 +22,59 @@ class TestComputeBvSize(unittest.TestCase):
         tests = [('bv12(x)', 64), ('y', 32), ('z + 35', 16)]
         for input_string, maxsize in tests:
             input_ast = ast.parse(input_string, mode="eval")
-            ComputeBvSize(maxsize).visit(input_ast)
-            self.assertEquals(getbvsize(input_ast), maxsize)
+            bvsize.ComputeBvSize(maxsize).visit(input_ast)
+            self.assertEquals(bvsize.getbvsize(input_ast), maxsize)
 
     def test_basics(self):
         'Very basics tests'
         tests = [('bv32(x)', 32), ('bv8(y)', 8), ('bv16(x + y)', 16)]
         for input_string, refsize in tests:
             input_ast = ast.parse(input_string, mode="eval")
-            ComputeBvSize(32).visit(input_ast)
-            self.assertEquals(getbvsize(input_ast.body), refsize)
+            bvsize.ComputeBvSize(32).visit(input_ast)
+            self.assertEquals(bvsize.getbvsize(input_ast.body), refsize)
 
     def test_nosize(self):
         'Test that maxnbits is chosen when size is not given'
         input_ast = ast.parse('x')
-        ComputeBvSize(32).visit(input_ast)
-        self.assertEquals(getbvsize(input_ast.body[0].value), 32)
+        bvsize.ComputeBvSize(32).visit(input_ast)
+        self.assertEquals(bvsize.getbvsize(input_ast.body[0].value), 32)
 
     def test_multisize(self):
         'Test that several sizes into one expression are taken into account'
         input_ast = ast.parse('bv32(bv16(x) + bv8(y))', mode="eval")
-        ComputeBvSize(32).visit(input_ast)
-        self.assertEquals(getbvsize(input_ast.body), 32)
-        self.assertEquals(getbvsize(input_ast.body.left), 16)
-        self.assertEquals(getbvsize(input_ast.body.right), 8)
+        bvsize.ComputeBvSize(32).visit(input_ast)
+        self.assertEquals(bvsize.getbvsize(input_ast.body), 32)
+        self.assertEquals(bvsize.getbvsize(input_ast.body.left), 16)
+        self.assertEquals(bvsize.getbvsize(input_ast.body.right), 8)
 
     def test_rol_ror(self):
         'Test when sspam_rol and sspam_ror functions are used'
         input_ast = ast.parse('sspam_rol(x, 2, 16)', mode="eval")
-        ComputeBvSize(32).visit(input_ast)
-        self.assertEquals(getbvsize(input_ast.body), 16)
+        bvsize.ComputeBvSize(32).visit(input_ast)
+        self.assertEquals(bvsize.getbvsize(input_ast.body), 16)
         input_ast = ast.parse('sspam_ror(y, 3, 32)', mode="eval")
-        ComputeBvSize(32).visit(input_ast)
-        self.assertEquals(getbvsize(input_ast.body), 32)
+        bvsize.ComputeBvSize(32).visit(input_ast)
+        self.assertEquals(bvsize.getbvsize(input_ast.body), 32)
 
 
-# class TestBasics(unittest.TestCase):
-#    """
-#    First basics tests.
-#    """
-#
-#    def test_one(self):
-#        'Very quick test'
-#        # pylint: disable=no-self-use
-#
-#        expr = ("(bv32(rol(Sym0 + bv32(1))) - bv32(8)" +
-#                " - bv32(8))*bv32(256) & bv8(0xFF)")
-#        print expr
-#        expr_ast = ast.parse(expr)
-#        bvsize.ComputeBvSize(32).visit(expr_ast)
-#        bvsize.DisplayBvSize().visit(expr_ast)
-#        print "-"*80
-#        bvsize.ReduceBvSize().visit(expr_ast)
-#        bvsize.DisplayBvSize().visit(expr_ast)
-#        print astunparse.unparse(expr_ast)
-#        bvsize.RegroupBvSize().visit(expr_ast)
-#        print astunparse.unparse(expr_ast)
-#        expr_ast = arithm_simpl.run(expr_ast, 64)
-#        print ast.dump(expr_ast)
-#        print astunparse.unparse(expr_ast)
+class TestSimpl(unittest.TestCase):
+   """
+   A few tests for simplification with bit-vector size.
+   """
+
+   def test_basic_arithm(self):
+       'Very basic tests for arithmetic simplification'
+       # pylint: disable=no-self-use
+
+       expr = "bv32(8) + bv32(8)"
+       expr_ast = ast.parse(expr)
+       bvsize.ComputeBvSize(32).visit(expr_ast)
+       bvsize.RegroupBvSize().visit(expr_ast)
+       expr_ast = arithm_simpl.run(expr_ast, 64)
+       refstring = "\nbv32(16L)\n"
+       self.assertEquals(unparse(expr_ast), refstring)
+       print ast.dump(expr_ast)
+       print unparse(expr_ast)
 
 
 if __name__ == '__main__':
