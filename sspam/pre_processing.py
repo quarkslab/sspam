@@ -133,20 +133,10 @@ class RemoveUselessAnd(ast.NodeTransformer):
 
 def all_preprocessings(asttarget, nbits=0):
     'Apply all pre-processing transforms'
-    asttarget = ShiftToMult().visit(asttarget)
-    asttarget = SubToMult().visit(asttarget)
-    asttarget = RemoveUselessAnd(nbits).visit(asttarget)
-    ast.fix_missing_locations(asttarget)
-    return asttarget
-
-
-def all_target_preprocessings(asttarget, nbits=0):
-    'Apply all pre-processing transforms for target ast'
     if not nbits:
         nbits = asttools.get_default_nbits(asttarget)
     asttarget = ShiftToMult().visit(asttarget)
-    asttarget = NotToInv().visit(asttarget)
-    asttarget = SubToMult(nbits).visit(asttarget)
+    asttarget = SubToMult().visit(asttarget)
     asttarget = RemoveUselessAnd(nbits).visit(asttarget)
     ast.fix_missing_locations(asttarget)
     return asttarget

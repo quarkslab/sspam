@@ -430,7 +430,7 @@ class PatternMatcher(asttools.Comparator):
 def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
     target_ast = ast.parse(target_str, mode="eval").body
-    target_ast = pre_processing.all_target_preprocessings(target_ast)
+    target_ast = pre_processing.all_preprocessings(target_ast)
     target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
     pattern_ast = ast.parse(pattern_str, mode="eval").body
     pattern_ast = pre_processing.all_preprocessings(pattern_ast)
@@ -540,7 +540,6 @@ def replace(target_str, pattern_str, replacement_str):
     'Apply pre-processing and replace'
     target_ast = ast.parse(target_str, mode="eval").body
     target_ast = pre_processing.all_preprocessings(target_ast)
-    target_ast = pre_processing.NotToInv().visit(target_ast)
     target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
     patt_ast = ast.parse(pattern_str, mode="eval").body
     patt_ast = pre_processing.all_preprocessings(patt_ast)

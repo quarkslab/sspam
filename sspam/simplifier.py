@@ -20,7 +20,8 @@ import os.path
 
 from sspam.tools import asttools
 from sspam import pattern_matcher
-from sspam.pre_processing import all_preprocessings, all_target_preprocessings
+from sspam.pre_processing import all_preprocessings
+from sspam.pre_processing import NotToInv
 from sspam import arithm_simpl
 
 
@@ -84,7 +85,8 @@ class Simplifier(ast.NodeTransformer):
             print "before: "
             print unparse(expr_ast)
             print ""
-        expr_ast = all_target_preprocessings(expr_ast, self.nbits)
+        expr_ast = all_preprocessings(expr_ast, self.nbits)
+        # only leveling ADD nodes because of traditionnal MBA patterns
         expr_ast = asttools.LevelOperators(ast.Add).visit(expr_ast)
         for pattern, repl in self.patterns:
             rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)
@@ -125,12 +127,8 @@ class Simplifier(ast.NodeTransformer):
             print "-"*80
         return expr_ast
 
-    def visit_Assign(self, node):
-        'Simplify value of assignment and update context'
-
-        # use EvalPattern to replace known variables
-        node.value = pattern_matcher.EvalPattern(
-            self.context).visit(node.value)
+    def loop_simplify(self, node):
+        'Simplifying loop to reach fixpoint'
         old_value = deepcopy(node.value)
         old_value = asttools.LevelOperators().visit(old_value)
         node.value = self.simplify(node.value, self.nbits)
@@ -146,25 +144,32 @@ class Simplifier(ast.NodeTransformer):
                 break
             copyvalue = asttools.LevelOperators().visit(copyvalue)
             old_value = asttools.LevelOperators().visit(old_value)
+            if asttools.Comparator().visit(old_value, copyvalue):
+                old_value = deepcopy(node.value)
+                node.value = NotToInv().visit(node.value)
+                node.value = self.simplify(node.value, self.nbits)
+                copyvalue = deepcopy(node.value)
+                # discard if NotToInv increased the size
+                if len(unparse(copyvalue)) > len(unparse(old_value)):
+                    node.value = deepcopy(old_value)
+                copyvalue = asttools.LevelOperators().visit(copyvalue)
+                old_value = asttools.LevelOperators().visit(old_value)
+        return node
+
+    def visit_Assign(self, node):
+        'Simplify value of assignment and update context'
+
+        # use EvalPattern to replace known variables
+        node.value = pattern_matcher.EvalPattern(
+            self.context).visit(node.value)
+        node = self.loop_simplify(node)
         for target in node.targets:
             self.context[target.id] = node.value
         return node
 
     def visit_Expr(self, node):
         'Simplify expression and replace it'
-        old_value = deepcopy(node.value)
-        old_value = asttools.LevelOperators().visit(old_value)
-        node.value = self.simplify(node.value, self.nbits)
-        copyvalue = deepcopy(node.value)
-        copyvalue = asttools.LevelOperators().visit(copyvalue)
-        # simplify until fixpoint is reached
-        while not asttools.Comparator().visit(old_value, copyvalue):
-            old_value = deepcopy(node.value)
-            old_value = asttools.LevelOperators().visit(old_value)
-            node.value = self.simplify(node.value, self.nbits)
-            copyvalue = deepcopy(node.value)
-            copyvalue = asttools.LevelOperators().visit(copyvalue)
-        return node
+        return self.loop_simplify(node)
 
 
 def simplify(expr, nbits=0, custom_rules=None, use_default=True):
