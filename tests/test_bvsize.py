@@ -58,23 +58,23 @@ class TestComputeBvSize(unittest.TestCase):
 
 
 class TestSimpl(unittest.TestCase):
-   """
-   A few tests for simplification with bit-vector size.
-   """
+    """
+    A few tests for simplification with bit-vector size.
+    """
 
-   def test_basic_arithm(self):
-       'Very basic tests for arithmetic simplification'
-       # pylint: disable=no-self-use
+    def test_basic_arithm(self):
+        'Very basic tests for arithmetic simplification'
+        # pylint: disable=no-self-use
 
-       expr = "bv32(8) + bv32(8)"
-       expr_ast = ast.parse(expr)
-       bvsize.ComputeBvSize(32).visit(expr_ast)
-       bvsize.RegroupBvSize().visit(expr_ast)
-       expr_ast = arithm_simpl.run(expr_ast, 64)
-       refstring = "\nbv32(16L)\n"
-       self.assertEquals(unparse(expr_ast), refstring)
-       print ast.dump(expr_ast)
-       print unparse(expr_ast)
+        expr = "bv32(8) + bv32(8)"
+        expr_ast = ast.parse(expr)
+        bvsize.ComputeBvSize(32).visit(expr_ast)
+        bvsize.RegroupBvSize().visit(expr_ast)
+        expr_ast = arithm_simpl.run(expr_ast, 64)
+        refstring = "\n16\n"
+        self.assertEquals(unparse(expr_ast), refstring)
+        print ast.dump(expr_ast)
+        print unparse(expr_ast)
 
 
 if __name__ == '__main__':
