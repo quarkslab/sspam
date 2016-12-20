@@ -5,11 +5,11 @@ Tests for bvsize module.
 # pylint: disable=relative-import
 
 import ast
-from astunparse import unparse
+# from astunparse import unparse
 import unittest
 
 from sspam.tools import bvsize
-from sspam import arithm_simpl
+# from sspam import arithm_simpl
 
 
 class TestComputeBvSize(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestComputeBvSize(unittest.TestCase):
             self.assertEquals(bvsize.getbvsize(input_ast), maxsize)
 
     def test_basics(self):
-        'Very basics tests'
+        'Very basic tests'
         tests = [('bv32(x)', 32), ('bv8(y)', 8), ('bv16(x + y)', 16)]
         for input_string, refsize in tests:
             input_ast = ast.parse(input_string, mode="eval")
@@ -57,24 +57,40 @@ class TestComputeBvSize(unittest.TestCase):
         self.assertEquals(bvsize.getbvsize(input_ast.body), 32)
 
 
-class TestSimpl(unittest.TestCase):
+class ReduceBvSize(unittest.TestCase):
     """
-    A few tests for simplification with bit-vector size.
+    Test the soundness of bvsize reduction.
     """
 
-    def test_basic_arithm(self):
-        'Very basic tests for arithmetic simplification'
-        # pylint: disable=no-self-use
+    def test_basics(self):
+        'Basic tests'
+        input_ast = ast.parse('(x + bv32(651289) & bv8(23))', mode="eval")
+        bvsize.ComputeBvSize(32).visit(input_ast)
+        bvsize.ReduceBvSize().visit(input_ast)
+        self.assertEquals(bvsize.getbvsize(input_ast.body), 8)
+        self.assertEquals(bvsize.getbvsize(input_ast.body.left), 8)
+        self.assertEquals(bvsize.getbvsize(input_ast.body.left.right), 8)
+        self.assertEquals(input_ast.body.left.right.n, 25)
 
-        expr = "bv32(8) + bv32(8)"
-        expr_ast = ast.parse(expr)
-        bvsize.ComputeBvSize(32).visit(expr_ast)
-        bvsize.RegroupBvSize().visit(expr_ast)
-        expr_ast = arithm_simpl.run(expr_ast, 64)
-        refstring = "\n16\n"
-        self.assertEquals(unparse(expr_ast), refstring)
-        print ast.dump(expr_ast)
-        print unparse(expr_ast)
+
+# class TestSimpl(unittest.TestCase):
+#     """
+#     A few tests for simplification with bit-vector size.
+#     """
+#
+#     def test_basic_arithm(self):
+#         'Very basic tests for arithmetic simplification'
+#         # pylint: disable=no-self-use
+#
+#         expr = "bv32(8) + bv32(8)"
+#         expr_ast = ast.parse(expr)
+#         bvsize.ComputeBvSize(32).visit(expr_ast)
+#         bvsize.RegroupBvSize().visit(expr_ast)
+#         expr_ast = arithm_simpl.run(expr_ast, 64)
+#         refstring = "\n16\n"
+#         self.assertEquals(unparse(expr_ast), refstring)
+#         print ast.dump(expr_ast)
+#         print unparse(expr_ast)
 
 
 if __name__ == '__main__':

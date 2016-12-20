@@ -152,6 +152,7 @@ class Simplifier(ast.NodeTransformer):
                 # discard if NotToInv increased the size
                 if len(unparse(copyvalue)) > len(unparse(old_value)):
                     node.value = deepcopy(old_value)
+                    copyvalue = deepcopy(node.value)
                 copyvalue = asttools.LevelOperators().visit(copyvalue)
                 old_value = asttools.LevelOperators().visit(old_value)
         return node

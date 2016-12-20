@@ -183,6 +183,7 @@ class ReduceBvSize(ast.NodeTransformer):
         'Reduce node if reduction in progress'
         if self.reducing:
             setattr(node, 'bvsize', self.reducing)
+            node.n = node.n % 2**self.reducing
         return node
 
     def visit_Call(self, node):
@@ -221,6 +222,21 @@ class DisplayBvSize(ast.NodeVisitor):
     """
     # pylint: disable=no-self-use
 
+    def visit_Module(self, node):
+        'Display Module'
+        print node, ': ', getattr(node, 'bvsize')
+        self.generic_visit(node)
+
+    def visit_Expr(self, node):
+        'Display Expr'
+        print node, ': ', getattr(node, 'bvsize')
+        self.generic_visit(node)
+
+    def visit_Expression(self, node):
+        'Display Expression'
+        print node, ': ', getattr(node, 'bvsize')
+        self.generic_visit(node)
+
     def visit_BinOp(self, node):
         'Display BinOp'
         print (type(node.left), node.op, type(node.right),
@@ -230,7 +246,12 @@ class DisplayBvSize(ast.NodeVisitor):
     def visit_UnaryOp(self, node):
         'Display UnaryOp'
         print node.op, type(node.operand), ': ', getattr(node, 'bvsize')
+        self.generic_visit(node)
 
     def visit_Num(self, node):
         'Display Num'
         print node.n, ': ', getattr(node, 'bvsize')
+
+    def visit_Name(self, node):
+        'Display Name'
+        print node.id, ': ', getattr(node, 'bvsize')
