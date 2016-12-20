@@ -428,17 +428,20 @@ class PatternMatcher(asttools.Comparator):
 
     def visit_Call(self, target, pattern):
         'Match name of Call and arguments'
-        name_match = self.visit(target.func, pattern.func)
-        args_match = all([self.visit(t_arg, p_arg) for t_arg, p_arg in
-                          zip(target.args, pattern.args)])
-        key_match = all([self.visit(t_key, p_key) for t_key, p_key in
-                         zip(target.keywords, pattern.keywords)])
-
+        if (not self.visit(target.func, pattern.func)
+           or len(target.args) != len(pattern.args)):
+            return False
+        if (not all([self.visit(t_arg, p_arg) for t_arg, p_arg in
+                    zip(target.args, pattern.args)])
+            or not all([self.visit(t_key, p_key) for t_key, p_key in
+                        zip(target.keywords, pattern.keywords)])):
+            return False
         # only dealing with None starags and kwards for the moment
-        star_match = (target.starargs is None and pattern.starargs is None)
-        kwar_match = (target.kwargs is None and pattern.kwargs is None)
-        return (name_match and args_match and key_match
-                and star_match and kwar_match)
+        if (not (target.starargs is None and pattern.starargs is None)
+           or not (target.kwargs is None and pattern.kwargs is None)):
+            return False
+
+        return True
 
 
 def match(target_str, pattern_str):
