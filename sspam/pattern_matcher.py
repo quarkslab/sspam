@@ -426,6 +426,20 @@ class PatternMatcher(asttools.Comparator):
             return False
         return self.visit(target.operand, pattern.operand)
 
+    def visit_Call(self, target, pattern):
+        'Match name of Call and arguments'
+        name_match = self.visit(target.func, pattern.func)
+        args_match = all([self.visit(t_arg, p_arg) for t_arg, p_arg in
+                          zip(target.args, pattern.args)])
+        key_match = all([self.visit(t_key, p_key) for t_key, p_key in
+                         zip(target.keywords, pattern.keywords)])
+
+        # only dealing with None starags and kwards for the moment
+        star_match = (target.starargs is None and pattern.starargs is None)
+        kwar_match = (target.kwargs is None and pattern.kwargs is None)
+        return (name_match and args_match and key_match
+                and star_match and kwar_match)
+
 
 def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
@@ -445,7 +459,7 @@ class PatternReplacement(ast.NodeTransformer):
     """
 
     def __init__(self, patt_ast, target_ast, rep_ast, nbits=0):
-        'Pattern ast should have as root: BinOp, BoolOp or UnaryOp'
+        'Pattern ast should have as root: BinOp, BoolOp, UnaryOp or Call'
         if isinstance(patt_ast, ast.Module):
             self.patt_ast = patt_ast.body[0].value
         elif isinstance(patt_ast, ast.Expression):
@@ -470,8 +484,8 @@ class PatternReplacement(ast.NodeTransformer):
         else:
             self.nbits = nbits
 
-    def visit_BinOp(self, node):
-        'Check if node is matching the pattern; if not, visit children'
+    def basic_visit(self, node):
+        'Check if node is matching the pattern, if not, visit children'
         pat = PatternMatcher(node, self.nbits)
         matched = pat.visit(node, self.patt_ast)
         if matched:
@@ -481,29 +495,24 @@ class PatternReplacement(ast.NodeTransformer):
         else:
             return self.generic_visit(node)
 
+    def visit_Call(self, node):
+        'No particular case for Call replacement'
+        return self.basic_visit(node)
+
+    def visit_BinOp(self, node):
+        'No particular case for BinOp replacement'
+        return self.basic_visit(node)
+
     def visit_UnaryOp(self, node):
-        'Check if node is matching the pattern, if not, visit operand'
-        pat = PatternMatcher(node, self.nbits)
-        matched = pat.visit(node, self.patt_ast)
-        if matched:
-            repc = deepcopy(self.rep_ast)
-            new_node = EvalPattern(pat.wildcards).visit(repc)
-            return new_node
-        else:
-            return self.generic_visit(node)
+        'No particular case for UnaryOp replacement'
+        return self.basic_visit(node)
 
     def visit_BoolOp(self, node):
         'Check if BoolOp is exaclty matching or contain pattern'
 
         if isinstance(self.patt_ast, ast.BoolOp):
             if len(node.values) == len(self.patt_ast.values):
-                pat = PatternMatcher(node, self.nbits)
-                matched = pat.visit(node, self.patt_ast)
-                if matched:
-                    new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
-                    return new_node
-                else:
-                    return self.generic_visit(node)
+                return self.basic_visit(node)
             elif len(node.values) > len(self.patt_ast.values):
                 # associativity n to m
                 for combi in itertools.combinations(node.values,

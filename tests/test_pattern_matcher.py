@@ -69,6 +69,13 @@ class TestPatternMatcher(PatternMatcherTest):
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string, True)
 
+    def test_fcts(self):
+        'Test with pattern containing a function'
+        pattern_string = "Fun(A)"
+        tests = ["Fun(x)", "Fun(2*y + 34)", "Fun(var + f(x))"]
+        for input_string in tests:
+            self.generic_test_positive(input_string, pattern_string, True)
+
     def test_mbaxor_one(self):
         'Test positive / negative matchings for one XOR mba'
         pattern_string = "(A ^ ~B) + 2*(A | B)"
@@ -191,6 +198,18 @@ class TestPatternReplacement(unittest.TestCase):
                   "~(g ^ 232) + (a*x + b) - 1"),
                  ("((g + 45) | (12 & n))*2 + ((-g - 46) ^ (12 & n))",
                   "(g + 45) + (12 & n) - 1")]
+        self.generic_test_replacement(tests, pattern, replacement)
+
+    def test_fcts(self):
+        'Tests with pattern containing a function'
+        pattern = 'max12(A) + 1'
+        replacement = 'g(A)'
+        tests = [('max12(x) + 1', 'g(x)'),
+                 ('max12(56*y - 12) + 1', 'g(56*y - 12)')]
+        self.generic_test_replacement(tests, pattern, replacement)
+        pattern = 'bv64(0)'
+        replacement = '0'
+        tests = [('x + bv64(0)', 'x + 0')]
         self.generic_test_replacement(tests, pattern, replacement)
 
     def test_associativity(self):
