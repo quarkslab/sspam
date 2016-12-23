@@ -393,7 +393,16 @@ class TestLeveling(unittest.TestCase):
                                             None)])],
                       [],
                       None,
-                      None))]
+                      None)),
+            ("f(8) + (a + f(8)) + f(14)",
+             ast.BoolOp(ast.Add(),
+                        [ast.Call(ast.Name('f', ast.Load()),
+                                  [ast.Num(8)], [], None, None),
+                         ast.Name('a', ast.Load()),
+                         ast.Call(ast.Name('f', ast.Load()),
+                                  [ast.Num(8)], [], None, None),
+                         ast.Call(ast.Name('f', ast.Load()),
+                                  [ast.Num(14)], [], None, None)]))]
         for teststring, ref_ast in tests:
             test_ast = ast.parse(teststring, mode="eval").body
             test_ast = asttools.LevelOperators(ast.Add).visit(test_ast)

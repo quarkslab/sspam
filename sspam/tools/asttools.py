@@ -508,7 +508,9 @@ class LevelOperators(ast.NodeTransformer):
                 return self.child_visit(node)
         else:
             current_leveling = self.current_leveling
-            self.generic_visit(node)
+            node.left = self.visit(node.left)
+            self.current_leveling = current_leveling
+            node.right = self.visit(node.right)
             self.current_leveling = current_leveling
             for child in (node.left, node.right):
                 cond = (isinstance(child, ast.BinOp)
