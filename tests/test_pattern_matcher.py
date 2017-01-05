@@ -72,7 +72,7 @@ class TestPatternMatcher(PatternMatcherTest):
     def test_fcts(self):
         'Test with pattern containing a function'
         pattern_string = "Fun(A)"
-        tests = ["Fun(x)", "Fun(2*y + 34)", "Fun(var + f(x))"]
+        tests = ["Fun(x)", "Fun(2*y + 34)", "Fun(var + f(x))", "Fun(0)"]
         for input_string in tests:
             self.generic_test_positive(input_string, pattern_string, False)
         self.generic_test_negative("fun(a)", pattern_string, False)

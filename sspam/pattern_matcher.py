@@ -141,8 +141,6 @@ class PatternMatcher(asttools.Comparator):
             else:
                 return False
         else:
-            if isinstance(target, ast.Num) and target.n == 0:
-                return False
             self.wildcards[pattern.id] = target
             return True
 
