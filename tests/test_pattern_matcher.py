@@ -82,6 +82,8 @@ class TestPatternMatcher(PatternMatcherTest):
         pattern_string = "Fun(A,B,C)"
         self.generic_test_positive("Fun(x,y,z)", pattern_string, False)
         self.generic_test_negative("Fun(a,b)", pattern_string, False)
+        pattern_string = "A + (fun(8) & B)"
+        self.generic_test_negative("(x + 1)", pattern_string, True)
 
     def test_mbaxor_one(self):
         'Test positive / negative matchings for one XOR mba'

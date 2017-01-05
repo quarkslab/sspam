@@ -69,8 +69,8 @@ class PatternMatcherTest(unittest.TestCase):
         'Generic test for positive matching'
         input_ast = ast.parse(input_string)
         pattern_ast = ast.parse(patt_string)
-        pat = pattern_matcher.PatternMatcher(input_ast)
         if not preproc:
+            pat = pattern_matcher.PatternMatcher(input_ast)
             self.assertTrue(pat.visit(input_ast, pattern_ast))
         self.assertTrue(pattern_matcher.match(input_string, patt_string))
 
@@ -78,8 +78,8 @@ class PatternMatcherTest(unittest.TestCase):
         'Generic test for negative matching'
         input_ast = ast.parse(input_string)
         pattern_ast = ast.parse(patt_string)
-        pat = pattern_matcher.PatternMatcher(input_ast)
         if not preproc:
+            pat = pattern_matcher.PatternMatcher(input_ast)
             self.assertFalse(pat.visit(input_ast, pattern_ast))
         self.assertFalse(pattern_matcher.match(input_string, patt_string))
 

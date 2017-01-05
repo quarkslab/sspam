@@ -154,6 +154,9 @@ class PatternMatcher(asttools.Comparator):
             return False
         getwild = asttools.GetIdentifiers()
         getwild.visit(pattern)
+        if getwild.functions:
+            # not getting model for expr with functions
+            return False
         wilds = getwild.variables
         # let's reduce the model to one wildcard for now
         # otherwise it adds a lot of checks...
