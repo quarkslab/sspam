@@ -81,6 +81,13 @@ class Simplifier(ast.NodeTransformer):
 
     def simplify(self, expr_ast, nbits):
         'Apply pattern matching and arithmetic simplification'
+        expr_ast = arithm_simpl.run(expr_ast, nbits)
+        expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
+        if DEBUG:
+            print "arithm simpl: "
+            print unparse(expr_ast)
+            print ""
+            print "-"*80
         if DEBUG:
             print "before: "
             print unparse(expr_ast)

@@ -33,7 +33,9 @@ c = (2 * x)"""
             samplefile = open(fname, 'r')
             refstring = samplefile.readline()[2:-1]
             output_string = simplifier.simplify(fname).split('\n')[-1]
-            self.assertTrue(refstring == output_string)
+            self.assertTrue(refstring == output_string,
+                            "Processing file %s: %s is not equal to %s"
+                            % (samplefilename, refstring, output_string))
 
 
 if __name__ == '__main__':
