@@ -86,12 +86,9 @@ class Simplifier(ast.NodeTransformer):
         if DEBUG:
             print "arithm simpl: "
             print unparse(expr_ast)
-            print ""
-            print "-"*80
         if DEBUG:
-            print "before: "
+            print "before matching: "
             print unparse(expr_ast)
-            print ""
         expr_ast = all_preprocessings(expr_ast, self.nbits)
         # only leveling ADD nodes because of traditionnal MBA patterns
         expr_ast = asttools.LevelOperators(ast.Add).visit(expr_ast)
@@ -101,19 +98,12 @@ class Simplifier(ast.NodeTransformer):
             if DEBUG:
                 if not asttools.Comparator().visit(new_ast, expr_ast):
                     print "replaced! "
-                    expr_debug = deepcopy(expr_ast)
-                    expr_debug = asttools.Unleveling().visit(expr_debug)
-                    print unparse(expr_debug)
-                    new_debug = deepcopy(new_ast)
-                    new_debug = asttools.Unleveling().visit(new_debug)
-                    print unparse(new_debug)
-                    print "before:   ", ast.dump(expr_ast)
-                    print "pattern:  ", ast.dump(pattern)
-                    patt_debug = asttools.Unleveling().visit(deepcopy(pattern))
-                    print unparse(patt_debug)
-                    print ""
-                    print ""
-                    print "after:    ", ast.dump(new_ast)
+                    dispat = deepcopy(pattern)
+                    dispat = asttools.Unleveling().visit(dispat)
+                    print "pattern:  ", unparse(dispat)
+                    disnew = deepcopy(new_ast)
+                    disnew = asttools.Unleveling().visit(disnew)
+                    print "after:    ", unparse(disnew)
                     print ""
             expr_ast = new_ast
         # bitwise simplification: this is a ugly hack, should be
@@ -124,14 +114,6 @@ class Simplifier(ast.NodeTransformer):
         if DEBUG:
             print "after PM: "
             print unparse(expr_ast)
-            print ""
-        expr_ast = arithm_simpl.run(expr_ast, nbits)
-        expr_ast = asttools.GetConstMod(self.nbits).visit(expr_ast)
-        if DEBUG:
-            print "arithm simpl: "
-            print unparse(expr_ast)
-            print ""
-            print "-"*80
         return expr_ast
 
     def loop_simplify(self, node):
@@ -162,6 +144,15 @@ class Simplifier(ast.NodeTransformer):
                     copyvalue = deepcopy(node.value)
                 copyvalue = asttools.LevelOperators().visit(copyvalue)
                 old_value = asttools.LevelOperators().visit(old_value)
+            print "-"*80
+        # final arithmetic simplification to clean output of matching
+        node.value = arithm_simpl.run(node.value, self.nbits)
+        asttools.GetConstMod(self.nbits).visit(node.value)
+        if DEBUG:
+            print "arithm simpl: "
+            print unparse(node.value)
+            print ""
+            print "-"*80
         return node
 
     def visit_Assign(self, node):
