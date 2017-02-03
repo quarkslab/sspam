@@ -95,8 +95,8 @@ class Simplifier(ast.NodeTransformer):
         for pattern, repl in self.patterns:
             rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)
             new_ast = rep.visit(deepcopy(expr_ast))
-            if DEBUG:
-                if not asttools.Comparator().visit(new_ast, expr_ast):
+            if not asttools.Comparator().visit(new_ast, expr_ast):
+                if DEBUG:
                     print "replaced! "
                     dispat = deepcopy(pattern)
                     dispat = asttools.Unleveling().visit(dispat)
@@ -105,7 +105,8 @@ class Simplifier(ast.NodeTransformer):
                     disnew = asttools.Unleveling().visit(disnew)
                     print "after:    ", unparse(disnew)
                     print ""
-            expr_ast = new_ast
+                expr_ast = new_ast
+                break
         # bitwise simplification: this is a ugly hack, should be
         # "generalized"
         expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
