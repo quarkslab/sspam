@@ -3,7 +3,7 @@
 
 Principal loop is in simplify() function:
   - pre-processing of asts
-  - leveling of add (highly dependant of used rules in MBA
+  - flattening of add (highly dependant of used rules in MBA
     obfuscation)
   - test each pattern if replacement is possible (does not break if
     replaced, so will try all patterns remaining)
@@ -19,6 +19,7 @@ from copy import deepcopy
 import os.path
 
 from sspam.tools import asttools
+from sspam.tools.flattening import Flattening, Unflattening
 from sspam import pattern_matcher
 from sspam.pre_processing import all_preprocessings
 from sspam.pre_processing import NotToInv
@@ -75,7 +76,7 @@ class Simplifier(ast.NodeTransformer):
         for pattern, replace in rules_list:
             patt_ast = ast.parse(pattern, mode="eval").body
             patt_ast = all_preprocessings(patt_ast, self.nbits)
-            patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
+            patt_ast = Flattening(ast.Add).visit(patt_ast)
             rep_ast = ast.parse(replace, mode="eval").body
             self.patterns.append((patt_ast, rep_ast))
 
@@ -90,8 +91,8 @@ class Simplifier(ast.NodeTransformer):
             print "before matching: "
             print unparse(expr_ast)
         expr_ast = all_preprocessings(expr_ast, self.nbits)
-        # only leveling ADD nodes because of traditionnal MBA patterns
-        expr_ast = asttools.LevelOperators(ast.Add).visit(expr_ast)
+        # only flattening ADD nodes because of traditionnal MBA patterns
+        expr_ast = Flattening(ast.Add).visit(expr_ast)
         for pattern, repl in self.patterns:
             rep = pattern_matcher.PatternReplacement(pattern, expr_ast, repl)
             new_ast = rep.visit(deepcopy(expr_ast))
@@ -99,19 +100,19 @@ class Simplifier(ast.NodeTransformer):
                 if DEBUG:
                     print "replaced! "
                     dispat = deepcopy(pattern)
-                    dispat = asttools.Unleveling().visit(dispat)
+                    dispat = Unflattening().visit(dispat)
                     print "pattern:  ", unparse(dispat)
                     disnew = deepcopy(new_ast)
-                    disnew = asttools.Unleveling().visit(disnew)
+                    disnew = Unflattening().visit(disnew)
                     print "after:    ", unparse(disnew)
                     print ""
                 expr_ast = new_ast
                 break
         # bitwise simplification: this is a ugly hack, should be
         # "generalized"
-        expr_ast = asttools.LevelOperators(ast.BitXor).visit(expr_ast)
+        expr_ast = Flattening(ast.BitXor).visit(expr_ast)
         expr_ast = asttools.ConstFolding(expr_ast, self.nbits).visit(expr_ast)
-        expr_ast = asttools.Unleveling().visit(expr_ast)
+        expr_ast = Unflattening().visit(expr_ast)
         if DEBUG:
             print "after PM: "
             print unparse(expr_ast)
@@ -120,10 +121,10 @@ class Simplifier(ast.NodeTransformer):
     def loop_simplify(self, node):
         'Simplifying loop to reach fixpoint'
         old_value = deepcopy(node.value)
-        old_value = asttools.LevelOperators().visit(old_value)
+        old_value = Flattening().visit(old_value)
         node.value = self.simplify(node.value, self.nbits)
         copyvalue = deepcopy(node.value)
-        copyvalue = asttools.LevelOperators().visit(copyvalue)
+        copyvalue = Flattening().visit(copyvalue)
         # simplify until fixpoint is reached
         while not asttools.Comparator().visit(old_value, copyvalue):
             old_value = deepcopy(node.value)
@@ -132,8 +133,8 @@ class Simplifier(ast.NodeTransformer):
             if len(unparse(copyvalue)) > len(unparse(old_value)):
                 node.value = deepcopy(old_value)
                 break
-            copyvalue = asttools.LevelOperators().visit(copyvalue)
-            old_value = asttools.LevelOperators().visit(old_value)
+            copyvalue = Flattening().visit(copyvalue)
+            old_value = Flattening().visit(old_value)
             if asttools.Comparator().visit(old_value, copyvalue):
                 old_value = deepcopy(node.value)
                 node.value = NotToInv().visit(node.value)
@@ -143,9 +144,10 @@ class Simplifier(ast.NodeTransformer):
                 if len(unparse(copyvalue)) >= len(unparse(old_value)):
                     node.value = deepcopy(old_value)
                     copyvalue = deepcopy(node.value)
-                copyvalue = asttools.LevelOperators().visit(copyvalue)
-                old_value = asttools.LevelOperators().visit(old_value)
-            print "-"*80
+                copyvalue = Flattening().visit(copyvalue)
+                old_value = Flattening().visit(old_value)
+            if DEBUG:
+                print "-"*80
         # final arithmetic simplification to clean output of matching
         node.value = arithm_simpl.run(node.value, self.nbits)
         asttools.GetConstMod(self.nbits).visit(node.value)

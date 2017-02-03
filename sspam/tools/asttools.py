@@ -15,12 +15,10 @@
 - GetConstMod replaces constants with their value modulo 2^n
 - Comparator is used to compare ast (modulo commutativity /
   associativity)
-- LevelOperators turns a binary ast into an n-ary ast for associative
-  operators.
-- Unleveling turns n-ary ast into binary ast.
 """
 
 import ast
+from sspam.tools.flattening import Unflattening
 
 
 def flatten(lis):
@@ -226,7 +224,7 @@ class ConstFolding(ast.NodeTransformer):
             return self.generic_visit(node)
 
     def visit_BoolOp(self, node):
-        'A custom BoolOp can be used in leveled AST'
+        'A custom BoolOp can be used in flattened AST'
         if type(node.op) not in (ast.Add, ast.Mult,
                                  ast.BitXor, ast.BitAnd, ast.BitOr):
             return self.generic_visit(node)
@@ -236,7 +234,7 @@ class ConstFolding(ast.NodeTransformer):
         if len(list_cste) < 2:
             return self.generic_visit(node)
         rest_values = [n for n in node.values if n not in list_cste]
-        fake_node = Unleveling().visit(ast.BoolOp(node.op, list_cste))
+        fake_node = Unflattening().visit(ast.BoolOp(node.op, list_cste))
         fake_node = ast.Expression(fake_node)
         ast.fix_missing_locations(fake_node)
         code = compile(fake_node, '<constant folding>', 'eval')
@@ -457,95 +455,3 @@ class Comparator(object):
     def visit_Num(self, node1, node2):
         'Check num value'
         return node1.n == node2.n
-
-
-class LevelOperators(ast.NodeTransformer):
-    """
-    Walk through the ast and level successions of associative
-    operators (+, x, &, |, ^) and transform binary nodes in n-ary
-    nodes.
-    """
-
-    def __init__(self, onlyop=None):
-        'Init current operation and storage for leveled nodes and operands'
-        self.current_leveling = ast.BinOp(None, None, None)
-        self.leveled_op = {}
-        self.onlyop = onlyop
-
-    def child_visit(self, node):
-        'To avoid interaction between child visit'
-        self.current_leveling = ast.BinOp(None, None, None)
-        node.left = self.visit(node.left)
-        self.current_leveling = ast.BinOp(None, None, None)
-        node.right = self.visit(node.right)
-        return node
-
-    def visit_BinOp(self, node):
-        'Transforms BinOp into leveled BoolOp if possible'
-
-        self.leveled_op.setdefault(node, [])
-        if self.onlyop and type(node.op) != self.onlyop:
-            return self.child_visit(node)
-        if type(node.op) != type(self.current_leveling.op):
-            if isinstance(node.op, (ast.Add, ast.Mult, ast.BitAnd,
-                                    ast.BitOr, ast.BitXor)):
-                cond1 = (isinstance(node.left, ast.BinOp)
-                         and type(node.left.op) == type(node.op))
-                cond2 = (isinstance(node.right, ast.BinOp)
-                         and type(node.right.op) == type(node.op))
-                if cond1 or cond2:
-                    self.current_leveling = node
-                    self.generic_visit(node)
-                    if ((not isinstance(node.right, ast.BinOp)
-                         or type(node.right.op) != type(node.op))):
-                        self.leveled_op[node].append(node.right)
-                    if ((not isinstance(node.left, ast.BinOp)
-                         or type(node.left.op) != type(node.op))):
-                        self.leveled_op[node].append(node.left)
-                else:
-                    return self.child_visit(node)
-            else:
-                return self.child_visit(node)
-        else:
-            current_leveling = self.current_leveling
-            node.left = self.visit(node.left)
-            self.current_leveling = current_leveling
-            node.right = self.visit(node.right)
-            self.current_leveling = current_leveling
-            for child in (node.left, node.right):
-                cond = (isinstance(child, ast.BinOp)
-                        and type(child.op) == type(node.op))
-                if not cond:
-                    self.leveled_op[self.current_leveling].append(child)
-
-        if self.leveled_op.get(node, None) and len(self.leveled_op[node]) > 1:
-            return ast.BoolOp(node.op, self.leveled_op[node])
-        return node
-
-    def visit_UnaryOp(self, node):
-        'UnaryOp are not leveld'
-        self.current_leveling = ast.BinOp(None, None, None)
-        return self.generic_visit(node)
-
-    def visit_Call(self, node):
-        'Calls interrupt the leveling'
-        self.current_leveling = ast.BinOp(None, None, None)
-        return self.generic_visit(node)
-
-
-class Unleveling(ast.NodeTransformer):
-    """
-    Change leveled BoolOps back to regular BinOps.
-    """
-
-    def visit_BoolOp(self, node):
-        'Build a serie of BinOp from BoolOp Children'
-
-        self.generic_visit(node)
-        rchildren = node.values[::-1]
-        prev = ast.BinOp(rchildren[1], node.op, rchildren[0])
-
-        for child in rchildren[2::]:
-            prev = ast.BinOp(child, node.op, prev)
-
-        return prev

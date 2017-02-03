@@ -13,6 +13,7 @@ import unittest
 
 from sspam import pattern_matcher, pre_processing
 from sspam.tools import asttools
+from sspam.tools.flattening import Flattening
 from templates import PatternMatcherTest
 
 
@@ -134,21 +135,21 @@ class TestPatternMatcher(PatternMatcherTest):
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string)
 
-    def test_leveled(self):
-        'Test positive matchings for leveled ast'
+    def test_flattened(self):
+        'Test positive matchings for flattened ast'
         pattern_string = "A + 2*B + 3*C"
         test_pos = ["x + 2*y + 3*z", "3*z + 2*y + x", "2*y + 3*z + x"]
         for input_string in test_pos:
             self.generic_test_positive(input_string, pattern_string, True)
 
-        # actual pre-processing only level ADD nodes, but this test is
-        # for code coverage
+        # actual pre-processing only flattens ADD nodes, but this test
+        # is for code coverage
         test_neg = ast.parse("x ^ 2*y ^ 2*z")
         test_neg = pre_processing.all_preprocessings(ast.parse(test_neg))
-        test_neg = asttools.LevelOperators().visit(test_neg)
+        test_neg = Flattening().visit(test_neg)
         patt_ast = ast.parse(pattern_string)
         patt_ast = pre_processing.all_preprocessings(patt_ast)
-        patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
+        patt_ast = Flattening(ast.Add).visit(patt_ast)
         pat = pattern_matcher.PatternMatcher(test_neg)
         self.assertFalse(pat.visit(test_neg, patt_ast))
 
@@ -232,8 +233,8 @@ class TestPatternReplacement(unittest.TestCase):
                                                  replacement)
             self.assertTrue(asttools.Comparator().visit(output_ast, ref_ast))
 
-    def test_leveled(self):
-        'Test on leveled ast'
+    def test_flattened(self):
+        'Test on flattened ast'
         patt_string = "A + 2*B + 3*C"
         rep_string = "A"
         test_pos = "3*z + x + 2*y"
@@ -241,15 +242,15 @@ class TestPatternReplacement(unittest.TestCase):
         output_ast = pattern_matcher.replace(test_pos, patt_string, rep_string)
         self.assertTrue(asttools.Comparator().visit(output_ast, ref_ast))
 
-        # only ADD nodes are leveled right now, this is for code
+        # only ADD nodes are flattened right now, this is for code
         # coverage
         test_neg = ast.parse("3*z ^ x ^ 2*y")
-        test_neg = asttools.LevelOperators().visit(test_neg)
+        test_neg = Flattening().visit(test_neg)
         patt_ast = ast.parse("A + 3*z")
-        patt_ast = asttools.LevelOperators().visit(patt_ast)
+        patt_ast = Flattening().visit(patt_ast)
         rep_ast = ast.parse(rep_string)
         ref_ast = ast.parse("3*z ^ x ^ 2*y")
-        ref_ast = asttools.LevelOperators().visit(ref_ast)
+        ref_ast = Flattening().visit(ref_ast)
         rep = pattern_matcher.PatternReplacement(patt_ast, test_neg, rep_ast)
         output_ast = rep.visit(test_neg)
         self.assertTrue(asttools.Comparator().visit(output_ast, ref_ast))

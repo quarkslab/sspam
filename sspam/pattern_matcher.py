@@ -28,6 +28,7 @@ except ImportError:
     raise Exception("z3 module is needed to use this pattern matcher")
 
 from sspam.tools import asttools
+from sspam.tools.flattening import Flattening, Unflattening
 from sspam import pre_processing
 
 
@@ -103,12 +104,12 @@ class PatternMatcher(asttools.Comparator):
         for var in self.variables:
             exec("%s = z3.BitVec('%s', %d)" % (var, var, self.nbits))
         target_ast = deepcopy(target)
-        target_ast = asttools.Unleveling().visit(target_ast)
+        target_ast = Unflattening().visit(target_ast)
         ast.fix_missing_locations(target_ast)
         code1 = compile(ast.Expression(target_ast), '<string>', mode='eval')
         eval_pattern = deepcopy(pattern)
         EvalPattern(self.wildcards).visit(eval_pattern)
-        eval_pattern = asttools.Unleveling().visit(eval_pattern)
+        eval_pattern = Unflattening().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
         getid.reset()
         getid.visit(eval_pattern)
@@ -166,14 +167,14 @@ class PatternMatcher(asttools.Comparator):
             if not isinstance(self.wildcards[wil], ast.Num):
                 return False
             folded = deepcopy(pattern)
-            folded = asttools.Unleveling().visit(folded)
+            folded = Unflattening().visit(folded)
             EvalPattern(self.wildcards).visit(folded)
             folded = asttools.ConstFolding(folded, self.nbits).visit(folded)
             return folded.n == target.n
         else:
             exec("%s = z3.BitVec('%s', %d)" % (wil, wil, self.nbits))
         eval_pattern = deepcopy(pattern)
-        eval_pattern = asttools.Unleveling().visit(eval_pattern)
+        eval_pattern = Unflattening().visit(eval_pattern)
         ast.fix_missing_locations(eval_pattern)
         code = compile(ast.Expression(eval_pattern), '<string>', mode='eval')
         sol = z3.Solver()
@@ -404,7 +405,7 @@ class PatternMatcher(asttools.Comparator):
         return False
 
     def visit_BoolOp(self, target, pattern):
-        'Match pattern on leveled operators of same length and same type'
+        'Match pattern on flattened operators of same length and same type'
         conds = (type(target.op) == type(pattern.op) and
                  len(target.values) == len(pattern.values))
         if not conds:
@@ -449,10 +450,10 @@ def match(target_str, pattern_str):
     'Apply all pre-processing, then pattern matcher'
     target_ast = ast.parse(target_str, mode="eval").body
     target_ast = pre_processing.all_preprocessings(target_ast)
-    target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
+    target_ast = Flattening(ast.Add).visit(target_ast)
     pattern_ast = ast.parse(pattern_str, mode="eval").body
     pattern_ast = pre_processing.all_preprocessings(pattern_ast)
-    pattern_ast = asttools.LevelOperators(ast.Add).visit(pattern_ast)
+    pattern_ast = Flattening(ast.Add).visit(pattern_ast)
     return PatternMatcher(target_ast).visit(target_ast, pattern_ast)
 
 
@@ -528,7 +529,7 @@ class PatternReplacement(ast.NodeTransformer):
                     if matched:
                         new = EvalPattern(pat.wildcards).visit(self.rep_ast)
                         new = ast.BoolOp(node.op, [new] + rest)
-                        new = asttools.Unleveling().visit(new)
+                        new = Unflattening().visit(new)
                         return new
             return self.generic_visit(node)
 
@@ -544,7 +545,7 @@ class PatternReplacement(ast.NodeTransformer):
                 if matched:
                     new_node = EvalPattern(pat.wildcards).visit(self.rep_ast)
                     new_node = ast.BoolOp(op, [new_node] + rest)
-                    new_node = asttools.Unleveling().visit(new_node)
+                    new_node = Unflattening().visit(new_node)
                     return new_node
         return self.generic_visit(node)
 
@@ -553,10 +554,10 @@ def replace(target_str, pattern_str, replacement_str):
     'Apply pre-processing and replace'
     target_ast = ast.parse(target_str, mode="eval").body
     target_ast = pre_processing.all_preprocessings(target_ast)
-    target_ast = asttools.LevelOperators(ast.Add).visit(target_ast)
+    target_ast = Flattening(ast.Add).visit(target_ast)
     patt_ast = ast.parse(pattern_str, mode="eval").body
     patt_ast = pre_processing.all_preprocessings(patt_ast)
-    patt_ast = asttools.LevelOperators(ast.Add).visit(patt_ast)
+    patt_ast = Flattening(ast.Add).visit(patt_ast)
     rep_ast = ast.parse(replacement_str)
     rep = PatternReplacement(patt_ast, target_ast, rep_ast)
     return rep.visit(target_ast)
@@ -573,5 +574,5 @@ if __name__ == '__main__':
     print "-"*80
     out = replace(test, patt_string, repl)
     print ast.dump(out)
-    out = asttools.Unleveling().visit(out)
+    out = Unflattening().visit(out)
     print astunparse.unparse(out)
