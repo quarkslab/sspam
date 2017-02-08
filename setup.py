@@ -15,7 +15,7 @@ setup(
     name='sspam',
     description=' A symbolic simplifier using pattern matching',
     long_description=long_description,
-    version='0.1.1',
+    version='0.2.0',
     url='https://github.com/pypa/sampleproject',
     author='Ninon Eyrolles',
     author_email='neyrolles@quarkslab.com',
