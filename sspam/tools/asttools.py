@@ -5,6 +5,7 @@
 - get_default_nbits returns the default bitsize of an ast if it is
   different from zero, returns 8 otherwise.
 - GetIdentifiers collects every identifiers of an ast.
+- GetNums collects all numerals of an ast.
 - GetSize computes the default bitsize of an ast from its constants.
 - GetConstExpr gathers all constants math expressions from an ast.
 - CheckConstExpr checks if a given node is a constant expression.
@@ -99,6 +100,20 @@ class GetIdentifiers(ast.NodeVisitor):
         self.functions.add(node.func.id)
         for arg in node.args:
             self.visit(arg)
+
+
+class GetNums(ast.NodeVisitor):
+    """
+    Get all numeric values (instances of ast.Num) of an ast.
+    """
+
+    def __init__(self):
+        'Result contains numeric values of ast.Num nodes'
+        self.result = set()
+
+    def visit_Num(self, node):
+        'Add node value to result'
+        self.result.add(node.n)
 
 
 class GetSize(ast.NodeVisitor):

@@ -16,7 +16,7 @@ class TestCSE(unittest.TestCase):
 
     def generic_basicCSE(self, instring, refstring):
         'Generic test for CSE: matching of CSE AST and ref AST'
-        output_cse = cse.apply_cse(instring)
+        output_cse = cse.apply_cse(instring)[0]
         output_ast = ast.parse(output_cse)
         ref_ast = ast.parse(refstring)
         # self.assertEquals(refstring, output_cse)
@@ -78,7 +78,7 @@ class TestCSE(unittest.TestCase):
         jack = asttools.GetIdentifiers()
         jack.visit(input_ast)
 
-        cse_string = cse.apply_cse(input_string)
+        cse_string = cse.apply_cse(input_string)[0]
         # get all assignment in one ast
         assigns = cse_string[:cse_string.rfind('\n')]
         cse_assign_ast = ast.parse(assigns, mode='exec')

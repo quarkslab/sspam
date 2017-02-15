@@ -396,21 +396,27 @@ def apply_cse(expr, outputfile=None):
     Apply CSE on expression file or string
     """
 
-    if os.path.isfile(expr):
-        exprfile = open(expr, 'r')
-        expr_ast = ast.parse(exprfile.read())
-    else:
-        expr_ast = ast.parse(expr)
+    if isinstance(expr, str):
+        if os.path.isfile(expr):
+            exprfile = open(expr, 'r')
+            expr_ast = ast.parse(exprfile.read())
+        else:
+            expr_ast = ast.parse(expr)
+    elif isinstance(expr, ast.AST):
+        if isinstance(expr, ast.Module):
+            expr_ast = deepcopy(expr)
+        else:
+            expr_ast = ast.Expr(expr)
     PromoteUnaryOp().visit(expr_ast)
     HandleCommutativity().visit(expr_ast)
     simple_cse(expr_ast)
     expr_ast = PostProcessing().visit(expr_ast)
-    expr = astunparse.unparse(expr_ast).strip('\n')
+    expr_string = astunparse.unparse(expr_ast).strip('\n')
     if outputfile:
         output_file = open(outputfile, 'w')
-        output_file.write(expr)
+        output_file.write(expr_string)
         output_file.close()
-    return expr
+    return expr_string, expr_ast
 
 
 if __name__ == "__main__":
@@ -419,6 +425,6 @@ if __name__ == "__main__":
         exit(0)
 
     if len(sys.argv) == 2:
-        print apply_cse(sys.argv[1])
+        print apply_cse(sys.argv[1])[0]
     if len(sys.argv) == 3:
-        print apply_cse(sys.argv[1], sys.argv[2])
+        print apply_cse(sys.argv[1], sys.argv[2])[0]
